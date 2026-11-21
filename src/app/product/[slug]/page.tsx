@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Script from "next/script";
 import { getProductBySlug, getProducts } from "@/lib/services/products";
+import { DEMO_PRODUCTS, type DemoProduct } from "@/lib/products-data";
 import { ProductDetailView } from "@/components/product-detail-view";
 import { filsToAED } from "@/lib/utils";
 
@@ -12,7 +13,8 @@ interface ProductPageProps {
 
 export async function generateStaticParams() {
   const products = await getProducts();
-  return products.map((p) => ({ slug: p.slug }));
+  const list: DemoProduct[] = products && products.length > 0 ? products : DEMO_PRODUCTS;
+  return list.map((p) => ({ slug: p.slug }));
 }
 
 export async function generateMetadata({

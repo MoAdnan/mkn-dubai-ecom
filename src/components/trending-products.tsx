@@ -79,6 +79,7 @@ export function TrendingProducts({ products }: { products: DemoProduct[] }) {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {filtered.map((product) => {
           const isAdded = !!addedIds[product.id];
+          const isOutOfStock = product.stock_quantity <= 0;
           return (
             <div
               key={product.id}
@@ -91,8 +92,16 @@ export function TrendingProducts({ products }: { products: DemoProduct[] }) {
                   alt={product.title}
                   fill
                   sizes="(max-width: 768px) 100vw, 25vw"
-                  className="object-contain group-hover:scale-105 transition-transform duration-300"
+                  className={`object-contain group-hover:scale-105 transition-transform duration-300 ${
+                    isOutOfStock ? "grayscale opacity-50" : ""
+                  }`}
                 />
+
+                {isOutOfStock && (
+                  <div className="absolute top-2 left-2 px-2.5 py-0.5 rounded-full bg-rose-500 text-white text-[10px] font-bold shadow-md">
+                    Out of Stock
+                  </div>
+                )}
 
                 {/* Quick view hover action */}
                 <Link
@@ -141,19 +150,30 @@ export function TrendingProducts({ products }: { products: DemoProduct[] }) {
                       </span>
                     )}
                   </div>
-                  <p className="text-[10px] text-muted-foreground">Incl. 5% UAE VAT</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    {isOutOfStock ? (
+                      <span className="text-rose-400 font-semibold">Currently Sold Out</span>
+                    ) : (
+                      "Incl. 5% UAE VAT"
+                    )}
+                  </p>
 
                   <div className="flex items-center gap-2 mt-3">
                     <button
                       type="button"
-                      onClick={() => handleAddToCart(product)}
+                      onClick={() => !isOutOfStock && handleAddToCart(product)}
+                      disabled={isOutOfStock}
                       className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl font-semibold text-xs transition-all duration-200 ${
-                        isAdded
+                        isOutOfStock
+                          ? "bg-muted text-muted-foreground border border-border/70 cursor-not-allowed"
+                          : isAdded
                           ? "bg-emerald-500 text-black"
                           : "bg-primary text-primary-foreground hover:bg-cyan-500 hover:text-black"
                       }`}
                     >
-                      {isAdded ? (
+                      {isOutOfStock ? (
+                        <span>Out of Stock</span>
+                      ) : isAdded ? (
                         <>
                           <Check className="w-4 h-4" />
                           <span>Added to Cart!</span>

@@ -61,106 +61,9 @@ interface StoreData {
 const DATA_DIR = path.join(process.cwd(), "data");
 const STORE_FILE = path.join(DATA_DIR, "store.json");
 
-const INITIAL_ORDERS: StoredOrder[] = [
-  {
-    id: "ord-1",
-    orderNumber: "MKN-2026-98214",
-    invoiceNumber: "INV-2026-98214",
-    customer: "Adnan Al-Hashimi",
-    email: "adnan@example.ae",
-    phone: "+971 50 123 4567",
-    emirate: "Dubai",
-    address: "Downtown Dubai, Burj Crown Tower, Suite 1402",
-    items: [
-      {
-        title: "Apple iPhone 16 Pro Max 256GB Desert Titanium",
-        sku: "MKN-APL-IP16PM-256",
-        quantity: 1,
-        priceFils: 469900,
-      },
-    ],
-    itemsSummary: "Apple iPhone 16 Pro Max 256GB Desert Titanium (x1)",
-    subtotalFils: 447524,
-    vatFils: 22376,
-    shippingFils: 0,
-    discountFils: 0,
-    totalFils: 469900,
-    paymentMethod: "card_stripe",
-    paymentStatus: "paid",
-    orderStatus: "delivered",
-    trackingNumber: "DXB-EXP-849201",
-    courierName: "MKN Dubai Express Courier",
-    date: "21 Nov 2026",
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "ord-2",
-    orderNumber: "MKN-2026-87140",
-    invoiceNumber: "INV-2026-87140",
-    customer: "Sarah Al-Mansoori",
-    email: "sarah@example.ae",
-    phone: "+971 52 987 6543",
-    emirate: "Abu Dhabi",
-    address: "Saadiyat Island, Villa 12",
-    items: [
-      {
-        title: "Apple MacBook Pro 16 M4 Max Space Black",
-        sku: "MKN-APL-MBP16-M4M",
-        quantity: 1,
-        priceFils: 1249900,
-      },
-    ],
-    itemsSummary: "Apple MacBook Pro 16 M4 Max Space Black (x1)",
-    subtotalFils: 1190381,
-    vatFils: 59519,
-    shippingFils: 0,
-    discountFils: 0,
-    totalFils: 1249900,
-    paymentMethod: "card_stripe",
-    paymentStatus: "paid",
-    orderStatus: "processing",
-    trackingNumber: "AUH-EXP-192842",
-    courierName: "MKN Emirates Standard",
-    date: "20 Nov 2026",
-    createdAt: new Date().toISOString(),
-  },
-];
+const INITIAL_ORDERS: StoredOrder[] = [];
 
-const INITIAL_INVOICES: StoredInvoice[] = [
-  {
-    id: "inv-1",
-    invoiceNumber: "INV-2026-98214",
-    orderNumber: "MKN-2026-98214",
-    invoiceType: "simplified",
-    issueDate: "21 Nov 2026",
-    customer: "Adnan Al-Hashimi",
-    email: "adnan@example.ae",
-    phone: "+971 50 123 4567",
-    address: "Downtown Dubai, Burj Crown Tower, Suite 1402",
-    emirate: "Dubai",
-    subtotalFils: 447524,
-    vatFils: 22376,
-    totalFils: 469900,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "inv-2",
-    invoiceNumber: "INV-2026-87140",
-    orderNumber: "MKN-2026-87140",
-    invoiceType: "full",
-    issueDate: "20 Nov 2026",
-    customer: "Sarah Al-Mansoori (B2B)",
-    email: "sarah@example.ae",
-    phone: "+971 52 987 6543",
-    address: "Saadiyat Island, Villa 12",
-    emirate: "Abu Dhabi",
-    customerTRN: "100982736100003",
-    subtotalFils: 1190381,
-    vatFils: 59519,
-    totalFils: 1249900,
-    createdAt: new Date().toISOString(),
-  },
-];
+const INITIAL_INVOICES: StoredInvoice[] = [];
 
 // Helper to ensure data directory and file exist
 function getStoreData(): StoreData {
@@ -206,7 +109,12 @@ function saveStoreData(data: StoreData): void {
 
 export function getStoredProducts(): DemoProduct[] {
   const data = getStoreData();
-  return data.products || DEMO_PRODUCTS;
+  if (!data.products || data.products.length === 0) {
+    data.products = [...DEMO_PRODUCTS];
+    saveStoreData(data);
+    return data.products;
+  }
+  return data.products;
 }
 
 export function saveStoredProduct(product: DemoProduct): DemoProduct[] {
@@ -230,11 +138,50 @@ export function deleteStoredProduct(id: string): DemoProduct[] {
   return data.products;
 }
 
+export function reduceProductStock(
+  items: { productId: string; variantId?: string; quantity: number }[]
+): DemoProduct[] {
+  const data = getStoreData();
+  let changed = false;
+
+  for (const item of items) {
+    const product = data.products.find(
+      (p) => p.id === item.productId || p.slug === item.productId
+    );
+    if (product) {
+      product.stock_quantity = Math.max(0, product.stock_quantity - item.quantity);
+      changed = true;
+
+      if (item.variantId && product.variants) {
+        const variant = product.variants.find((v) => v.id === item.variantId);
+        if (variant) {
+          variant.stock = Math.max(0, variant.stock - item.quantity);
+        }
+      }
+    }
+  }
+
+  if (changed) {
+    saveStoreData(data);
+  }
+
+  return data.products;
+}
+
 // ---------------- ORDERS ----------------
 
 export function getStoredOrders(): StoredOrder[] {
   const data = getStoreData();
-  return data.orders || INITIAL_ORDERS;
+  return data.orders || [];
+}
+
+export function getStoredOrderByNumber(orderNumber: string): StoredOrder | undefined {
+  const data = getStoreData();
+  return (data.orders || []).find(
+    (o) =>
+      o.orderNumber.toLowerCase() === orderNumber.toLowerCase() ||
+      o.id === orderNumber
+  );
 }
 
 export function saveStoredOrder(order: StoredOrder): StoredOrder[] {
@@ -292,6 +239,6 @@ export function updateStoredOrderStatus(
 
 export function getStoredInvoices(): StoredInvoice[] {
   const data = getStoreData();
-  return data.invoices || INITIAL_INVOICES;
+  return data.invoices || [];
 }
 

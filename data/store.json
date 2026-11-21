@@ -1,10 +1,45 @@
 {
-  "products": [],
+  "products": [
+    {
+      "id": "prod-1795272745457",
+      "category_id": "cat-1",
+      "category_name": "Smartphones",
+      "category_slug": "smartphones",
+      "brand_id": "b-1",
+      "brand_name": "Apple",
+      "brand_slug": "apple",
+      "title": "iPhone SE",
+      "slug": "iphone-se",
+      "short_description": "New flagship device with official UAE warranty.",
+      "description": "Official distributor stock with 1-year warranty and same-day delivery.",
+      "sku": "MKN-732946",
+      "base_price_fils": 80000,
+      "sale_price_fils": null,
+      "stock_quantity": 20,
+      "rating": 5,
+      "reviews_count": 0,
+      "is_featured": false,
+      "is_deal": false,
+      "warranty_months": 12,
+      "warranty_type": "Official UAE Distributor Warranty",
+      "images": [
+        {
+          "url": "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?auto=format&fit=crop&w=1000&q=80",
+          "alt": "iPhone SE",
+          "is_primary": true
+        }
+      ],
+      "variants": [],
+      "specs": {
+        "Warranty": "12 Months TDRA approved"
+      }
+    }
+  ],
   "orders": [
     {
-      "id": "ord-67144",
-      "orderNumber": "MKN-2026-67144",
-      "invoiceNumber": "INV-2026-67144",
+      "id": "ord-73602",
+      "orderNumber": "MKN-2026-73602",
+      "invoiceNumber": "INV-2026-73602",
       "customer": "Adnan Al-Hashimi",
       "email": "adnan@example.ae",
       "phone": "+971 50 123 4567",
@@ -12,95 +47,33 @@
       "address": "Sheikh Mohammed bin Rashid Blvd, Downtown Dubai, Burj Crown Tower, Suite 1402",
       "items": [
         {
-          "title": "Apple iPhone 16 Pro Max 256GB Desert Titanium",
-          "sku": "MKN-APL-IP16PM-256",
-          "quantity": 1,
-          "priceFils": 469900
+          "title": "iPhone SE",
+          "sku": "MKN-732946",
+          "quantity": 3,
+          "priceFils": 80000
         }
       ],
-      "itemsSummary": "Apple iPhone 16 Pro Max 256GB Desert Titanium (x1)",
-      "subtotalFils": 469900,
-      "vatFils": 22376,
+      "itemsSummary": "iPhone SE (x3)",
+      "subtotalFils": 240000,
+      "vatFils": 11429,
       "shippingFils": 3500,
       "discountFils": 0,
-      "totalFils": 473400,
-      "paymentMethod": "card_stripe",
-      "paymentStatus": "paid",
-      "orderStatus": "processing",
-      "trackingNumber": "DUB-EXP-67144",
-      "courierName": "Dubai Same-Day Express",
-      "date": "21 Nov 2026",
-      "createdAt": "2026-11-21T14:25:37.917Z",
-      "isB2B": false
-    },
-    {
-      "id": "ord-1",
-      "orderNumber": "MKN-2026-98214",
-      "invoiceNumber": "INV-2026-98214",
-      "customer": "Adnan Al-Hashimi",
-      "email": "adnan@example.ae",
-      "phone": "+971 50 123 4567",
-      "emirate": "Dubai",
-      "address": "Downtown Dubai, Burj Crown Tower, Suite 1402",
-      "items": [
-        {
-          "title": "Apple iPhone 16 Pro Max 256GB Desert Titanium",
-          "sku": "MKN-APL-IP16PM-256",
-          "quantity": 1,
-          "priceFils": 469900
-        }
-      ],
-      "itemsSummary": "Apple iPhone 16 Pro Max 256GB Desert Titanium (x1)",
-      "subtotalFils": 447524,
-      "vatFils": 22376,
-      "shippingFils": 0,
-      "discountFils": 0,
-      "totalFils": 469900,
+      "totalFils": 243500,
       "paymentMethod": "card_stripe",
       "paymentStatus": "paid",
       "orderStatus": "delivered",
-      "trackingNumber": "DXB-EXP-849201",
-      "courierName": "MKN Dubai Express Courier",
+      "trackingNumber": "DUB-EXP-73602",
+      "courierName": "Dubai Same-Day Express",
       "date": "21 Nov 2026",
-      "createdAt": "2026-11-21T14:18:50.116Z"
-    },
-    {
-      "id": "ord-2",
-      "orderNumber": "MKN-2026-87140",
-      "invoiceNumber": "INV-2026-87140",
-      "customer": "Sarah Al-Mansoori",
-      "email": "sarah@example.ae",
-      "phone": "+971 52 987 6543",
-      "emirate": "Abu Dhabi",
-      "address": "Saadiyat Island, Villa 12",
-      "items": [
-        {
-          "title": "Apple MacBook Pro 16 M4 Max Space Black",
-          "sku": "MKN-APL-MBP16-M4M",
-          "quantity": 1,
-          "priceFils": 1249900
-        }
-      ],
-      "itemsSummary": "Apple MacBook Pro 16 M4 Max Space Black (x1)",
-      "subtotalFils": 1190381,
-      "vatFils": 59519,
-      "shippingFils": 0,
-      "discountFils": 0,
-      "totalFils": 1249900,
-      "paymentMethod": "card_stripe",
-      "paymentStatus": "paid",
-      "orderStatus": "processing",
-      "trackingNumber": "AUH-EXP-192842",
-      "courierName": "MKN Emirates Standard",
-      "date": "20 Nov 2026",
-      "createdAt": "2026-11-21T14:18:50.117Z"
+      "createdAt": "2026-11-21T14:58:28.157Z",
+      "isB2B": false
     }
   ],
   "invoices": [
     {
-      "id": "inv-1795271137939",
-      "invoiceNumber": "INV-2026-67144",
-      "orderNumber": "MKN-2026-67144",
+      "id": "inv-1795273108159",
+      "invoiceNumber": "INV-2026-73602",
+      "orderNumber": "MKN-2026-73602",
       "invoiceType": "simplified",
       "issueDate": "21 Nov 2026",
       "customer": "Adnan Al-Hashimi",
@@ -108,43 +81,10 @@
       "phone": "+971 50 123 4567",
       "address": "Sheikh Mohammed bin Rashid Blvd, Downtown Dubai, Burj Crown Tower, Suite 1402",
       "emirate": "Dubai",
-      "subtotalFils": 469900,
-      "vatFils": 22376,
-      "totalFils": 473400,
-      "createdAt": "2026-11-21T14:25:37.939Z"
-    },
-    {
-      "id": "inv-1",
-      "invoiceNumber": "INV-2026-98214",
-      "orderNumber": "MKN-2026-98214",
-      "invoiceType": "simplified",
-      "issueDate": "21 Nov 2026",
-      "customer": "Adnan Al-Hashimi",
-      "email": "adnan@example.ae",
-      "phone": "+971 50 123 4567",
-      "address": "Downtown Dubai, Burj Crown Tower, Suite 1402",
-      "emirate": "Dubai",
-      "subtotalFils": 447524,
-      "vatFils": 22376,
-      "totalFils": 469900,
-      "createdAt": "2026-11-21T14:18:50.117Z"
-    },
-    {
-      "id": "inv-2",
-      "invoiceNumber": "INV-2026-87140",
-      "orderNumber": "MKN-2026-87140",
-      "invoiceType": "full",
-      "issueDate": "20 Nov 2026",
-      "customer": "Sarah Al-Mansoori (B2B)",
-      "email": "sarah@example.ae",
-      "phone": "+971 52 987 6543",
-      "address": "Saadiyat Island, Villa 12",
-      "emirate": "Abu Dhabi",
-      "customerTRN": "100982736100003",
-      "subtotalFils": 1190381,
-      "vatFils": 59519,
-      "totalFils": 1249900,
-      "createdAt": "2026-11-21T14:18:50.117Z"
+      "subtotalFils": 240000,
+      "vatFils": 11429,
+      "totalFils": 243500,
+      "createdAt": "2026-11-21T14:58:28.159Z"
     }
   ]
 }

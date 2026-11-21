@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import {
   getStoredOrders,
+  getStoredOrderByNumber,
   updateStoredOrderStatus,
   getStoredInvoices,
   type StoredOrder,
@@ -11,6 +12,13 @@ import {
 
 export async function getAdminOrdersAction(): Promise<StoredOrder[]> {
   return getStoredOrders();
+}
+
+export async function getOrderByNumberAction(
+  orderNumber: string
+): Promise<StoredOrder | null> {
+  const order = getStoredOrderByNumber(orderNumber);
+  return order || null;
 }
 
 export async function updateOrderStatusAction(

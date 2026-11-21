@@ -4,8 +4,13 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { calculateUAEOrderTax } from "@/lib/invoice/tax-engine";
 import { getPaymentGateway } from "@/lib/payments/gateway";
-import { getStoredProducts, saveStoredOrder } from "@/lib/services/persistent-store";
+import {
+  getStoredProducts,
+  saveStoredOrder,
+  reduceProductStock,
+} from "@/lib/services/persistent-store";
 import { aedToFils } from "@/lib/utils";
+import { createAdminClient } from "@/lib/supabase/server";
 
 const CheckoutSchema = z.object({
   fullName: z.string().min(2, "Full name is required"),
@@ -51,6 +56,16 @@ export async function processCheckoutAction(input: CheckoutInput) {
     const product = currentProducts.find((p) => p.id === cartItem.productId);
     if (!product) {
       throw new Error(`Product not found in store: ${cartItem.productId}`);
+    }
+
+    if (product.stock_quantity <= 0) {
+      throw new Error(`"${product.title}" is currently Out of Stock.`);
+    }
+
+    if (product.stock_quantity < cartItem.quantity) {
+      throw new Error(
+        `Only ${product.stock_quantity} units available in stock for "${product.title}".`
+      );
     }
 
     const variant = cartItem.variantId
@@ -176,6 +191,55 @@ export async function processCheckoutAction(input: CheckoutInput) {
     customerTRN: validated.customerTRN,
   });
 
+  // 9. Reduce product stock inventory immediately
+  reduceProductStock(
+    validated.items.map((it) => ({
+      productId: it.productId,
+      variantId: it.variantId,
+      quantity: it.quantity,
+    }))
+  );
+
+  // Also sync to Supabase Database if credentials are provided
+  try {
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (serviceKey && serviceKey !== "dummy-service-role-key" && !serviceKey.startsWith("dummy")) {
+      const supabase = createAdminClient();
+      await (supabase.from("orders") as any).insert({
+        order_number: orderNumber,
+        guest_name: validated.fullName,
+        guest_email: validated.email,
+        guest_phone: validated.phone,
+        shipping_address: {
+          emirate: validated.emirate,
+          area: validated.area,
+          street_address: validated.streetAddress,
+          building_name: validated.buildingName,
+          apartment_number: validated.apartmentNumber,
+        },
+        subtotal_fils: taxSummary.subtotalFils,
+        vat_fils: taxSummary.vatFils,
+        shipping_fils: taxSummary.shippingFils,
+        discount_fils: taxSummary.discountFils,
+        total_fils: taxSummary.totalFils,
+        currency: "AED",
+        payment_method: validated.paymentMethod,
+        payment_status: validated.paymentMethod === "card_stripe" ? "paid" : "pending",
+        order_status: "processing",
+        tracking_number: `${validated.emirate.slice(0, 3).toUpperCase()}-EXP-${randomSuffix}`,
+        courier_name:
+          validated.deliveryMethod === "express"
+            ? "Dubai Same-Day Express"
+            : "Emirates Standard Courier",
+      });
+    }
+  } catch (supabaseErr) {
+    console.warn("Supabase order sync note (stored locally in server persistent store):", supabaseErr);
+  }
+
+  revalidatePath("/catalogue");
+  revalidatePath("/");
+  revalidatePath("/admin/products");
   revalidatePath("/admin/orders");
   revalidatePath("/admin/invoices");
   revalidatePath("/admin");

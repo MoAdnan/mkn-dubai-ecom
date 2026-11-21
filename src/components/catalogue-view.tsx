@@ -445,6 +445,7 @@ export function CatalogueView({
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredProducts.map((product) => {
                 const isAdded = !!addedIds[product.id];
+                const isOutOfStock = product.stock_quantity <= 0;
                 return (
                   <div
                     key={product.id}
@@ -456,13 +457,19 @@ export function CatalogueView({
                         alt={product.title}
                         fill
                         sizes="(max-width: 768px) 100vw, 33vw"
-                        className="object-contain group-hover:scale-105 transition-transform duration-300"
+                        className={`object-contain group-hover:scale-105 transition-transform duration-300 ${
+                          isOutOfStock ? "grayscale opacity-50" : ""
+                        }`}
                       />
-                      {product.is_deal && (
+                      {isOutOfStock ? (
+                        <div className="absolute top-2 left-2 px-2.5 py-0.5 rounded-full bg-rose-500/90 text-white text-[10px] font-bold shadow-md">
+                          Out of Stock
+                        </div>
+                      ) : product.is_deal ? (
                         <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-cyan-500 text-black text-[10px] font-bold">
                           Deal
                         </div>
-                      )}
+                      ) : null}
                     </div>
 
                     <div className="space-y-2 flex-1 flex flex-col justify-between">
@@ -496,18 +503,29 @@ export function CatalogueView({
                             </span>
                           )}
                         </div>
-                        <p className="text-[10px] text-muted-foreground">Incl. 5% UAE VAT</p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {isOutOfStock ? (
+                            <span className="text-rose-400 font-semibold">Currently Sold Out</span>
+                          ) : (
+                            "Incl. 5% UAE VAT"
+                          )}
+                        </p>
 
                         <button
                           type="button"
-                          onClick={() => handleAddToCart(product)}
+                          onClick={() => !isOutOfStock && handleAddToCart(product)}
+                          disabled={isOutOfStock}
                           className={`mt-3 w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl font-semibold text-xs transition-all duration-200 ${
-                            isAdded
+                            isOutOfStock
+                              ? "bg-muted text-muted-foreground border border-border/70 cursor-not-allowed"
+                              : isAdded
                               ? "bg-emerald-500 text-black"
                               : "bg-primary text-primary-foreground hover:bg-cyan-500 hover:text-black"
                           }`}
                         >
-                          {isAdded ? (
+                          {isOutOfStock ? (
+                            <span>Out of Stock</span>
+                          ) : isAdded ? (
                             <>
                               <Check className="w-3.5 h-3.5" />
                               <span>Added</span>
@@ -530,6 +548,7 @@ export function CatalogueView({
             <div className="space-y-4">
               {filteredProducts.map((product) => {
                 const isAdded = !!addedIds[product.id];
+                const isOutOfStock = product.stock_quantity <= 0;
                 return (
                   <div
                     key={product.id}
@@ -541,8 +560,15 @@ export function CatalogueView({
                         alt={product.title}
                         fill
                         sizes="144px"
-                        className="object-contain group-hover:scale-105 transition-transform duration-300"
+                        className={`object-contain group-hover:scale-105 transition-transform duration-300 ${
+                          isOutOfStock ? "grayscale opacity-50" : ""
+                        }`}
                       />
+                      {isOutOfStock && (
+                        <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-rose-500 text-white text-[9px] font-bold">
+                          Out of Stock
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex-1 space-y-1.5 text-center sm:text-left">
@@ -565,10 +591,14 @@ export function CatalogueView({
                           <span className="text-muted-foreground">({product.reviews_count} reviews)</span>
                         </span>
                         <span>•</span>
-                        <span className="text-emerald-400 flex items-center gap-1">
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          <span>In Stock</span>
-                        </span>
+                        {isOutOfStock ? (
+                          <span className="text-rose-400 font-semibold">Out of Stock</span>
+                        ) : (
+                          <span className="text-emerald-400 flex items-center gap-1">
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span>In Stock ({product.stock_quantity})</span>
+                          </span>
+                        )}
                       </div>
                     </div>
 
@@ -587,14 +617,17 @@ export function CatalogueView({
 
                       <button
                         type="button"
-                        onClick={() => handleAddToCart(product)}
+                        onClick={() => !isOutOfStock && handleAddToCart(product)}
+                        disabled={isOutOfStock}
                         className={`mt-3 w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl font-semibold text-xs transition-all duration-200 ${
-                          isAdded
+                          isOutOfStock
+                            ? "bg-muted text-muted-foreground border border-border/70 cursor-not-allowed"
+                            : isAdded
                             ? "bg-emerald-500 text-black"
                             : "bg-primary text-primary-foreground hover:bg-cyan-500 hover:text-black"
                         }`}
                       >
-                        {isAdded ? "Added" : "Add to Cart"}
+                        {isOutOfStock ? "Out of Stock" : isAdded ? "Added" : "Add to Cart"}
                       </button>
                     </div>
                   </div>

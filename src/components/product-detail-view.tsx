@@ -47,6 +47,11 @@ export function ProductDetailView({
 
   // Selected variant details
   const selectedVariant = product.variants.find((v) => v.id === selectedVariantId);
+  const effectiveStock = selectedVariant
+    ? (selectedVariant.stock ?? product.stock_quantity)
+    : product.stock_quantity;
+  const isOutOfStock = effectiveStock <= 0;
+
   const activePriceFils =
     selectedVariant?.sale_price_fils ||
     selectedVariant?.price_fils ||
@@ -298,29 +303,55 @@ export function ProductDetailView({
           )}
 
           {/* Stock Availability */}
-          <div className="flex items-center gap-2 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-400">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-            <span>
-              <strong>In Stock</strong> at Dubai Central Fulfillment Warehouse. Order within{" "}
-              <strong>2 hours</strong> for Same-Day Delivery.
-            </span>
-          </div>
+          {isOutOfStock ? (
+            <div className="flex items-center gap-2.5 p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/25 text-xs text-rose-400">
+              <span className="w-2.5 h-2.5 rounded-full bg-rose-400 flex-shrink-0" />
+              <span>
+                <strong>Out of Stock</strong> at Dubai Central Fulfillment Warehouse. Restocking expected shortly.
+              </span>
+            </div>
+          ) : effectiveStock <= 5 ? (
+            <div className="flex items-center gap-2.5 p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-xs text-amber-400">
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping flex-shrink-0" />
+              <span>
+                <strong>Low Stock Alert:</strong> Only <strong>{effectiveStock}</strong> units remaining in stock. Order within <strong>2 hours</strong> for Same-Day Delivery.
+              </span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-400">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+              <span>
+                <strong>In Stock ({effectiveStock} available)</strong> at Dubai Central Fulfillment Warehouse. Order within{" "}
+                <strong>2 hours</strong> for Same-Day Delivery.
+              </span>
+            </div>
+          )}
 
           {/* Quantity & Add to Cart Buttons */}
           <div className="space-y-3 pt-2">
             <div className="flex items-center gap-3">
-              <div className="flex items-center border border-border/80 rounded-xl bg-card px-2 py-1.5">
+              <div
+                className={`flex items-center border border-border/80 rounded-xl bg-card px-2 py-1.5 ${
+                  isOutOfStock ? "opacity-50 pointer-events-none" : ""
+                }`}
+              >
                 <button
+                  type="button"
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  className="px-2 text-muted-foreground hover:text-foreground font-bold"
+                  disabled={isOutOfStock || quantity <= 1}
+                  className="px-2 text-muted-foreground hover:text-foreground font-bold disabled:opacity-40"
                   aria-label="Decrease quantity"
                 >
                   -
                 </button>
-                <span className="px-3 text-sm font-bold font-mono">{quantity}</span>
+                <span className="px-3 text-sm font-bold font-mono">
+                  {isOutOfStock ? 0 : quantity}
+                </span>
                 <button
-                  onClick={() => setQuantity(quantity + 1)}
-                  className="px-2 text-muted-foreground hover:text-foreground font-bold"
+                  type="button"
+                  onClick={() => setQuantity(Math.min(effectiveStock, quantity + 1))}
+                  disabled={isOutOfStock || quantity >= effectiveStock}
+                  className="px-2 text-muted-foreground hover:text-foreground font-bold disabled:opacity-40"
                   aria-label="Increase quantity"
                 >
                   +
@@ -330,13 +361,18 @@ export function ProductDetailView({
               <button
                 type="button"
                 onClick={handleAddToCart}
+                disabled={isOutOfStock}
                 className={`flex-1 flex items-center justify-center gap-2 py-3.5 px-6 rounded-2xl font-bold text-sm shadow-xl transition-all duration-200 ${
-                  isAdded
+                  isOutOfStock
+                    ? "bg-muted text-muted-foreground border border-border/80 cursor-not-allowed shadow-none"
+                    : isAdded
                     ? "bg-emerald-500 text-black shadow-emerald-500/20"
                     : "bg-gradient-to-r from-cyan-500 to-violet-600 hover:from-cyan-400 hover:to-violet-500 text-white shadow-cyan-500/20 hover:scale-[1.01]"
                 }`}
               >
-                {isAdded ? (
+                {isOutOfStock ? (
+                  <span>Out of Stock</span>
+                ) : isAdded ? (
                   <>
                     <Check className="w-4 h-4" />
                     <span>Added to Cart!</span>
@@ -363,13 +399,19 @@ export function ProductDetailView({
               </button>
             </div>
 
-            <Link
-              href="/checkout"
-              onClick={handleAddToCart}
-              className="w-full flex items-center justify-center py-3 px-6 rounded-2xl bg-card border border-border/80 hover:bg-accent/40 font-semibold text-sm transition-colors"
-            >
-              Express Checkout (1-Click)
-            </Link>
+            {!isOutOfStock ? (
+              <Link
+                href="/checkout"
+                onClick={handleAddToCart}
+                className="w-full flex items-center justify-center py-3 px-6 rounded-2xl bg-card border border-border/80 hover:bg-accent/40 font-semibold text-sm transition-colors"
+              >
+                Express Checkout (1-Click)
+              </Link>
+            ) : (
+              <div className="w-full py-2.5 px-6 rounded-2xl bg-muted/40 border border-border/60 text-center text-xs text-muted-foreground font-medium">
+                Currently Sold Out — Restocking Soon
+              </div>
+            )}
           </div>
 
           {/* Description */}
@@ -465,10 +507,15 @@ export function ProductDetailView({
           <button
             type="button"
             onClick={handleAddToCart}
-            className="flex items-center gap-2 py-2.5 px-6 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 hover:from-cyan-400 hover:to-violet-500 text-white font-bold text-xs shadow-lg shadow-cyan-500/20"
+            disabled={isOutOfStock}
+            className={`flex items-center gap-2 py-2.5 px-6 rounded-xl font-bold text-xs shadow-lg transition-all ${
+              isOutOfStock
+                ? "bg-muted text-muted-foreground cursor-not-allowed border border-border/80"
+                : "bg-gradient-to-r from-cyan-500 to-violet-600 hover:from-cyan-400 hover:to-violet-500 text-white shadow-cyan-500/20"
+            }`}
           >
             <ShoppingBag className="w-4 h-4" />
-            <span>Add to Cart</span>
+            <span>{isOutOfStock ? "Out of Stock" : "Add to Cart"}</span>
           </button>
         </div>
       )}
