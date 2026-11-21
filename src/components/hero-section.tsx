@@ -2,42 +2,15 @@
 
 import * as React from "react";
 import Link from "next/link";
-import dynamic from "next/dynamic";
 import { ArrowRight, Sparkles, ShieldCheck, Zap, Truck, CheckCircle2 } from "lucide-react";
+import { HeroShowcase } from "@/components/hero-showcase";
+import type { DemoProduct } from "@/lib/products-data";
 
-// Lazy-load Three.js Canvas with static graphic fallback
-const HeroScene = dynamic(
-  () => import("@/components/hero-canvas").then((mod) => mod.HeroScene),
-  {
-    ssr: false,
-    loading: () => <HeroFallback />,
-  }
-);
-
-function HeroFallback() {
-  return (
-    <div className="w-full h-full flex items-center justify-center relative">
-      <div className="w-64 h-96 rounded-3xl bg-gradient-to-tr from-cyan-950/40 via-card to-violet-950/40 border border-cyan-500/30 shadow-2xl shadow-cyan-500/10 flex flex-col items-center justify-between p-6 animate-pulse">
-        <div className="w-16 h-3 rounded-full bg-cyan-500/20" />
-        <div className="w-28 h-28 rounded-full bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
-          <Sparkles className="w-10 h-10" />
-        </div>
-        <div className="w-32 h-2 rounded bg-muted" />
-      </div>
-    </div>
-  );
+interface HeroSectionProps {
+  products?: DemoProduct[];
 }
 
-export function HeroSection() {
-  const [useFallback, setUseFallback] = React.useState(false);
-
-  React.useEffect(() => {
-    // Check prefers-reduced-motion
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setUseFallback(true);
-    }
-  }, []);
-
+export function HeroSection({ products = [] }: HeroSectionProps) {
   return (
     <section className="relative overflow-hidden min-h-[calc(100vh-4.5rem)] flex items-center py-12 lg:py-20 bg-[radial-gradient(ellipse_80%_60%_at_50%_-15%,rgba(0,242,254,0.12),rgba(112,0,255,0.06),transparent)]">
       {/* Ambient background glow dots */}
@@ -103,10 +76,9 @@ export function HeroSection() {
             </div>
           </div>
 
-          {/* Right Column: 3D Interactive Showcase */}
-          <div className="lg:col-span-5 h-[380px] sm:h-[460px] lg:h-[520px] relative flex items-center justify-center">
-            <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/5 to-transparent rounded-3xl" />
-            {useFallback ? <HeroFallback /> : <HeroScene />}
+          {/* Right Column: Interactive Flagship Showcase */}
+          <div className="lg:col-span-5 relative flex items-center justify-center">
+            <HeroShowcase products={products} />
           </div>
         </div>
       </div>

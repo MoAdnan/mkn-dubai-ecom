@@ -25,6 +25,8 @@ export interface StoredOrder {
   totalFils: number;
   paymentMethod: "card_stripe" | "cod";
   paymentStatus: "paid" | "pending" | "refunded";
+  cardLast4?: string;
+  cardBrand?: string;
   orderStatus: "pending" | "processing" | "shipped" | "delivered" | "cancelled" | "refunded";
   trackingNumber: string;
   courierName: string;

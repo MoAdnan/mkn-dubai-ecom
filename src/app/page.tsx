@@ -5,7 +5,12 @@ import { DealsStrip } from "@/components/deals-strip";
 import { TrendingProducts } from "@/components/trending-products";
 import { BrandStrip } from "@/components/brand-strip";
 import { NewsletterSection } from "@/components/newsletter-section";
-import { getFeaturedProducts, getDealProducts } from "@/lib/services/products";
+import { getFeaturedProducts, getDealProducts, getProducts } from "@/lib/services/products";
+
+async function HeroData() {
+  const products = await getProducts();
+  return <HeroSection products={products} />;
+}
 
 async function DealsData() {
   const dealProducts = await getDealProducts();
@@ -20,8 +25,10 @@ async function TrendingData() {
 export default function HomePage() {
   return (
     <div className="flex flex-col min-h-screen">
-      {/* 1. 3D Hero Section */}
-      <HeroSection />
+      {/* 1. Hero Section with Live Database Products */}
+      <Suspense fallback={<HeroSection products={[]} />}>
+        <HeroData />
+      </Suspense>
 
       {/* 2. Categories Grid */}
       <CategoryGrid />

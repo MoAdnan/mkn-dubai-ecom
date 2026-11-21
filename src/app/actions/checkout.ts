@@ -34,6 +34,14 @@ const CheckoutSchema = z.object({
   deliveryMethod: z.enum(["standard", "express"]),
   paymentMethod: z.enum(["card_stripe", "cod"]),
   couponCode: z.string().optional(),
+  cardDetails: z
+    .object({
+      cardNumber: z.string().min(14, "Card number is required"),
+      cardHolder: z.string().min(2, "Cardholder name is required"),
+      expiryDate: z.string().min(4, "Expiry date (MM/YY) is required"),
+      cvv: z.string().min(3).max(4, "CVV is required"),
+    })
+    .optional(),
   items: z.array(
     z.object({
       productId: z.string(),
@@ -130,7 +138,54 @@ export async function processCheckoutAction(input: CheckoutInput) {
   const orderNumber = `MKN-${currentYear}-${randomSuffix}`;
   const invoiceNumber = `INV-${currentYear}-${randomSuffix}`;
 
-  // 7. Initialize Payment Intent via Payment Gateway
+  // 7. Validate Card Details & Process Payment
+  let cardLast4: string | undefined = undefined;
+  let cardBrand: string | undefined = undefined;
+
+  if (validated.paymentMethod === "card_stripe") {
+    if (!validated.cardDetails) {
+      throw new Error("Credit/Debit Card payment details are required to complete this order.");
+    }
+
+    const cleanCard = validated.cardDetails.cardNumber.replace(/\s+/g, "");
+    if (cleanCard.length < 14 || cleanCard.length > 19) {
+      throw new Error("Invalid card number. Please provide a valid card number.");
+    }
+
+    if (!/^\d{2}\/\d{2}$/.test(validated.cardDetails.expiryDate)) {
+      throw new Error("Invalid expiry date format. Please use MM/YY (e.g. 12/28).");
+    }
+
+    const [mmStr, yyStr] = validated.cardDetails.expiryDate.split("/");
+    const expMonth = parseInt(mmStr, 10);
+    const expYear = 2000 + parseInt(yyStr, 10);
+    const now = new Date();
+    const currentYearNum = now.getFullYear();
+    const currentMonthNum = now.getMonth() + 1;
+
+    if (expMonth < 1 || expMonth > 12) {
+      throw new Error("Invalid expiration month. Must be between 01 and 12.");
+    }
+    if (expYear < currentYearNum || (expYear === currentYearNum && expMonth < currentMonthNum)) {
+      throw new Error("Your payment card has expired. Please use an active payment card.");
+    }
+    if (validated.cardDetails.cvv.length < 3) {
+      throw new Error("Invalid CVV/CVC code. Please provide the 3 or 4-digit security code.");
+    }
+
+    cardLast4 = cleanCard.slice(-4);
+    if (cleanCard.startsWith("4")) {
+      cardBrand = "Visa";
+    } else if (cleanCard.startsWith("5")) {
+      cardBrand = "Mastercard";
+    } else if (cleanCard.startsWith("3")) {
+      cardBrand = "American Express";
+    } else {
+      cardBrand = "Credit Card";
+    }
+  }
+
+  // 8. Initialize Payment Intent via Payment Gateway
   const gateway = getPaymentGateway(validated.paymentMethod);
   const paymentResult = await gateway.createPaymentIntent({
     orderId: orderNumber,
@@ -142,10 +197,12 @@ export async function processCheckoutAction(input: CheckoutInput) {
     metadata: {
       invoiceNumber,
       emirate: validated.emirate,
+      cardLast4: cardLast4 || "",
+      cardBrand: cardBrand || "",
     },
   });
 
-  // 8. PERSIST THE REAL ORDER & TAX INVOICE
+  // 9. PERSIST THE REAL ORDER & TAX INVOICE
   const now = new Date();
   const dateFormatted = new Intl.DateTimeFormat("en-AE", {
     timeZone: "Asia/Dubai",
@@ -179,6 +236,8 @@ export async function processCheckoutAction(input: CheckoutInput) {
     totalFils: taxSummary.totalFils,
     paymentMethod: validated.paymentMethod,
     paymentStatus: validated.paymentMethod === "card_stripe" ? "paid" : "pending",
+    cardLast4,
+    cardBrand,
     orderStatus: "processing",
     trackingNumber: `${validated.emirate.slice(0, 3).toUpperCase()}-EXP-${randomSuffix}`,
     courierName:

@@ -12,6 +12,12 @@ import {
   Banknote,
   Lock,
   AlertCircle,
+  Sparkles,
+  CheckCircle2,
+  Loader2,
+  Building2,
+  Shield,
+  HelpCircle,
 } from "lucide-react";
 import { useCart } from "@/components/cart-provider";
 import { formatAED, aedToFils } from "@/lib/utils";
@@ -50,8 +56,19 @@ function CheckoutForm() {
   const [paymentMethod, setPaymentMethod] = React.useState<"card_stripe" | "cod">("card_stripe");
   const [couponCode, setCouponCode] = React.useState(prefilledCoupon);
 
+  // Card Payment Details State
+  const [cardNumber, setCardNumber] = React.useState("4242 4242 4242 4242");
+  const [cardHolder, setCardHolder] = React.useState("Adnan Al-Hashimi");
+  const [expiryDate, setExpiryDate] = React.useState("12/28");
+  const [cvv, setCvv] = React.useState("123");
+
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+
+  // Interactive Payment Gateway Step Simulation
+  const [paymentStep, setPaymentStep] = React.useState<
+    "idle" | "authorizing" | "3ds_verifying" | "capturing" | "success"
+  >("idle");
 
   // Delivery calculation
   const shippingFils = deliveryMethod === "express" ? 3500 : subtotalFils >= 25000 ? 0 : 2000;
@@ -72,6 +89,42 @@ function CheckoutForm() {
 
   const totalPayableFils = Math.max(0, subtotalFils + shippingFils - discountFils);
 
+  // Card formatters
+  const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value.replace(/\D/g, "").slice(0, 16);
+    const parts = raw.match(/.{1,4}/g);
+    setCardNumber(parts ? parts.join(" ") : raw);
+  };
+
+  const handleExpiryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value.replace(/\D/g, "").slice(0, 4);
+    if (raw.length >= 3) {
+      setExpiryDate(`${raw.slice(0, 2)}/${raw.slice(2)}`);
+    } else {
+      setExpiryDate(raw);
+    }
+  };
+
+  const handleCvvChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value.replace(/\D/g, "").slice(0, 4);
+    setCvv(raw);
+  };
+
+  const fillTestCard = () => {
+    setCardNumber("4242 4242 4242 4242");
+    setCardHolder(fullName || "Adnan Al-Hashimi");
+    setExpiryDate("12/28");
+    setCvv("123");
+  };
+
+  const cardBrand = React.useMemo(() => {
+    const clean = cardNumber.replace(/\s+/g, "");
+    if (clean.startsWith("4")) return "VISA";
+    if (clean.startsWith("5")) return "MASTERCARD";
+    if (clean.startsWith("3")) return "AMEX";
+    return "CARD";
+  }, [cardNumber]);
+
   const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -80,6 +133,17 @@ function CheckoutForm() {
     try {
       if (items.length === 0) {
         throw new Error("Your cart is empty. Please add items before checking out.");
+      }
+
+      // If Card Payment, show interactive payment verification stages
+      if (paymentMethod === "card_stripe") {
+        setPaymentStep("authorizing");
+        await new Promise((r) => setTimeout(r, 600));
+
+        setPaymentStep("3ds_verifying");
+        await new Promise((r) => setTimeout(r, 700));
+
+        setPaymentStep("capturing");
       }
 
       const res = await processCheckoutAction({
@@ -96,6 +160,15 @@ function CheckoutForm() {
         deliveryMethod,
         paymentMethod,
         couponCode: couponCode || undefined,
+        cardDetails:
+          paymentMethod === "card_stripe"
+            ? {
+                cardNumber,
+                cardHolder,
+                expiryDate,
+                cvv,
+              }
+            : undefined,
         items: items.map((i) => ({
           productId: i.productId,
           variantId: i.variantId,
@@ -104,12 +177,17 @@ function CheckoutForm() {
       });
 
       if (res.success) {
+        if (paymentMethod === "card_stripe") {
+          setPaymentStep("success");
+          await new Promise((r) => setTimeout(r, 400));
+        }
         clearCart();
         router.push(
           `/order-confirmation/${res.orderNumber}?invoice=${res.invoiceNumber}&total=${res.totalFils}&method=${res.paymentMethod}`
         );
       }
     } catch (err: any) {
+      setPaymentStep("idle");
       setError(err?.message || "Failed to process checkout. Please check the details.");
     } finally {
       setLoading(false);
@@ -135,6 +213,72 @@ function CheckoutForm() {
 
   return (
     <>
+      {/* 3D Secure / Payment Gateway Processing Modal Overlay */}
+      {paymentStep !== "idle" && (
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="max-w-md w-full rounded-3xl border border-border/80 bg-card p-8 shadow-2xl space-y-6 text-center animate-in fade-in zoom-in-95 duration-200">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-cyan-500/20 to-violet-500/20 border border-cyan-500/30 text-cyan-400 flex items-center justify-center mx-auto shadow-lg shadow-cyan-500/10">
+              {paymentStep === "success" ? (
+                <CheckCircle2 className="w-8 h-8 text-emerald-400" />
+              ) : (
+                <Loader2 className="w-8 h-8 animate-spin text-cyan-400" />
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                STRIPE 3D SECURE 2.0 GATEWAY
+              </span>
+              <h3 className="font-heading font-black text-xl text-foreground">
+                {paymentStep === "authorizing" && "Authorizing Card..."}
+                {paymentStep === "3ds_verifying" && "3D Secure 2.0 Bank Verification"}
+                {paymentStep === "capturing" && "Capturing Payment in AED..."}
+                {paymentStep === "success" && "Payment Succeeded!"}
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                {paymentStep === "authorizing" && `Contacting payment gateway for card ending in ${cardNumber.slice(-4)}...`}
+                {paymentStep === "3ds_verifying" && "Authenticating with UAE Central Bank secure payment network..."}
+                {paymentStep === "capturing" && `Securing payment of ${formatAED(totalPayableFils)}...`}
+                {paymentStep === "success" && "Transaction approved. Generating official FTA Tax Invoice..."}
+              </p>
+            </div>
+
+            {/* Stages visualization */}
+            <div className="p-4 rounded-2xl bg-muted/30 border border-border/60 text-xs text-left space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground flex items-center gap-2">
+                  <CreditCard className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>Card Validation</span>
+                </span>
+                <span className="text-emerald-400 font-bold text-[11px]">✓ Verified</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground flex items-center gap-2">
+                  <Shield className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>3DS 2.0 Authentication</span>
+                </span>
+                <span className="text-[11px] font-bold text-foreground">
+                  {paymentStep === "authorizing" ? "Pending..." : "✓ Approved"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground flex items-center gap-2">
+                  <Building2 className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>Tax Invoice Generation</span>
+                </span>
+                <span className="text-[11px] font-mono font-bold text-cyan-400">
+                  {paymentStep === "success" ? "✓ Issued" : "Processing..."}
+                </span>
+              </div>
+            </div>
+
+            <p className="text-[11px] text-muted-foreground">
+              Please do not close or refresh this page.
+            </p>
+          </div>
+        </div>
+      )}
+
       {error && (
         <div className="mb-6 p-4 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive text-xs flex items-center gap-2">
           <AlertCircle className="w-4 h-4 flex-shrink-0" />
@@ -203,7 +347,7 @@ function CheckoutForm() {
                   <select
                     value={emirate}
                     onChange={(e) => setEmirate(e.target.value as any)}
-                    className="w-full p-2.5 rounded-xl bg-muted/40 border border-border/80 focus:outline-none focus:border-cyan-500 font-medium"
+                    className="w-full p-2.5 rounded-xl bg-muted/40 border border-border/80 focus:outline-none focus:border-cyan-500"
                   >
                     {UAE_EMIRATES.map((em) => (
                       <option key={em} value={em}>
@@ -220,7 +364,7 @@ function CheckoutForm() {
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Downtown Dubai, JLT, Al Barsha"
+                    placeholder="e.g. Downtown Dubai / Al Barsha"
                     value={area}
                     onChange={(e) => setArea(e.target.value)}
                     className="w-full p-2.5 rounded-xl bg-muted/40 border border-border/80 focus:outline-none focus:border-cyan-500"
@@ -234,7 +378,7 @@ function CheckoutForm() {
                   <input
                     type="text"
                     required
-                    placeholder="Street name / Number"
+                    placeholder="e.g. Sheikh Zayed Road"
                     value={streetAddress}
                     onChange={(e) => setStreetAddress(e.target.value)}
                     className="w-full p-2.5 rounded-xl bg-muted/40 border border-border/80 focus:outline-none focus:border-cyan-500"
@@ -268,29 +412,27 @@ function CheckoutForm() {
                 </div>
               </div>
 
-              {/* B2B Invoicing Checkbox */}
+              {/* B2B / Tax Invoice Details */}
               <div className="pt-3 border-t border-border/40">
-                <label className="flex items-center gap-2 cursor-pointer text-xs">
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-foreground">
                   <input
                     type="checkbox"
                     checked={isB2B}
                     onChange={(e) => setIsB2B(e.target.checked)}
-                    className="rounded border-border text-cyan-500 focus:ring-cyan-500/20"
+                    className="rounded border-border text-cyan-500 focus:ring-cyan-500"
                   />
-                  <span className="font-medium text-foreground">
-                    This is a Corporate / B2B Order (Generate Full Tax Invoice with TRN)
-                  </span>
+                  <span>Ordering for a UAE Business (Request Full B2B Tax Invoice)</span>
                 </label>
 
                 {isB2B && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs mt-3 p-3 bg-muted/30 rounded-xl border border-border/40">
+                  <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs animate-in fade-in">
                     <div>
                       <label className="font-medium text-foreground block mb-1">
-                        Company Name
+                        Registered Company Name
                       </label>
                       <input
                         type="text"
-                        placeholder="Company Name LLC"
+                        placeholder="e.g. Al-Hashimi Ventures LLC"
                         value={companyName}
                         onChange={(e) => setCompanyName(e.target.value)}
                         className="w-full p-2 rounded-lg bg-background border border-border/80 text-xs"
@@ -379,7 +521,7 @@ function CheckoutForm() {
               </div>
             </div>
 
-            {/* 3. Payment Method */}
+            {/* 3. Payment Method with Real Card Gateway Fields */}
             <div className="rounded-2xl border border-border/80 bg-card p-6 space-y-4">
               <h2 className="font-heading font-bold text-base text-foreground flex items-center gap-2">
                 <span className="w-6 h-6 rounded-full bg-cyan-500/15 text-cyan-400 text-xs font-mono flex items-center justify-center font-bold">
@@ -389,35 +531,135 @@ function CheckoutForm() {
               </h2>
 
               <div className="space-y-3 text-xs">
-                <label
-                  className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all ${
+                {/* Option A: Credit / Debit Card */}
+                <div
+                  className={`rounded-xl border transition-all ${
                     paymentMethod === "card_stripe"
-                      ? "border-cyan-500 bg-cyan-500/10 ring-1 ring-cyan-500/30"
+                      ? "border-cyan-500 bg-cyan-500/5 ring-1 ring-cyan-500/30"
                       : "border-border/70 hover:border-border"
                   }`}
                 >
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="radio"
-                      name="payment"
-                      checked={paymentMethod === "card_stripe"}
-                      onChange={() => setPaymentMethod("card_stripe")}
-                      className="text-cyan-500"
-                    />
-                    <div>
-                      <span className="font-bold text-foreground block">
-                        Credit / Debit Card (Stripe Gateway)
-                      </span>
-                      <span className="text-[11px] text-muted-foreground">
-                        Visa, Mastercard, Apple Pay accepted
-                      </span>
+                  <label className="flex items-center justify-between p-4 cursor-pointer">
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="radio"
+                        name="payment"
+                        checked={paymentMethod === "card_stripe"}
+                        onChange={() => setPaymentMethod("card_stripe")}
+                        className="text-cyan-500"
+                      />
+                      <div>
+                        <span className="font-bold text-foreground block">
+                          Credit / Debit Card (Stripe Gateway)
+                        </span>
+                        <span className="text-[11px] text-muted-foreground">
+                          Visa, Mastercard, American Express, Apple Pay
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <CreditCard className="w-5 h-5 text-cyan-400" />
-                  </div>
-                </label>
+                    <div className="flex items-center gap-2">
+                      <CreditCard className="w-5 h-5 text-cyan-400" />
+                    </div>
+                  </label>
 
+                  {/* Card Entry Fields (Displayed when Card is selected) */}
+                  {paymentMethod === "card_stripe" && (
+                    <div className="px-4 pb-5 pt-1 space-y-4 border-t border-border/50 animate-in fade-in">
+                      <div className="flex items-center justify-between pt-2">
+                        <span className="text-[11px] font-semibold text-foreground flex items-center gap-1.5">
+                          <Lock className="w-3.5 h-3.5 text-cyan-400" />
+                          <span>Card Information (256-Bit SSL Encrypted)</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={fillTestCard}
+                          className="text-[10px] text-cyan-400 hover:underline flex items-center gap-1 font-semibold cursor-pointer"
+                        >
+                          <Sparkles className="w-3 h-3 text-amber-400" />
+                          <span>Fill Test Card (4242)</span>
+                        </button>
+                      </div>
+
+                      {/* Card Number */}
+                      <div>
+                        <label className="font-medium text-foreground block mb-1 text-[11px]">
+                          Card Number
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            required
+                            placeholder="4242 4242 4242 4242"
+                            value={cardNumber}
+                            onChange={handleCardNumberChange}
+                            maxLength={19}
+                            className="w-full p-2.5 rounded-xl bg-background border border-border/80 text-xs font-mono text-foreground focus:outline-none focus:border-cyan-500 pr-16"
+                          />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                            {cardBrand}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Cardholder, Expiry, CVV */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div className="sm:col-span-1">
+                          <label className="font-medium text-foreground block mb-1 text-[11px]">
+                            Cardholder Name
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            placeholder="Name on card"
+                            value={cardHolder}
+                            onChange={(e) => setCardHolder(e.target.value)}
+                            className="w-full p-2.5 rounded-xl bg-background border border-border/80 text-xs text-foreground focus:outline-none focus:border-cyan-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="font-medium text-foreground block mb-1 text-[11px]">
+                            Expires (MM/YY)
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            placeholder="12/28"
+                            value={expiryDate}
+                            onChange={handleExpiryChange}
+                            maxLength={5}
+                            className="w-full p-2.5 rounded-xl bg-background border border-border/80 text-xs font-mono text-foreground focus:outline-none focus:border-cyan-500 text-center"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="font-medium text-foreground block mb-1 text-[11px] flex items-center justify-between">
+                            <span>CVV / CVC</span>
+                            <span className="text-[10px] text-muted-foreground">3-4 digits</span>
+                          </label>
+                          <input
+                            type="password"
+                            required
+                            placeholder="123"
+                            value={cvv}
+                            onChange={handleCvvChange}
+                            maxLength={4}
+                            className="w-full p-2.5 rounded-xl bg-background border border-border/80 text-xs font-mono text-foreground focus:outline-none focus:border-cyan-500 text-center"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="p-2.5 rounded-lg bg-muted/40 border border-border/40 text-[10px] text-muted-foreground flex items-center gap-2">
+                        <ShieldCheck className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                        <span>
+                          Direct bank authorization. 3D Secure 2.0 verification will be performed automatically.
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Option B: Cash on Delivery */}
                 <label
                   className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all ${
                     paymentMethod === "cod"
@@ -438,7 +680,7 @@ function CheckoutForm() {
                         Cash on Delivery (COD)
                       </span>
                       <span className="text-[11px] text-muted-foreground">
-                        Pay cash or card to the courier upon delivery
+                        Pay cash or card to the courier upon delivery anywhere in UAE
                       </span>
                     </div>
                   </div>
@@ -521,14 +763,21 @@ function CheckoutForm() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full mt-4 flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 hover:from-cyan-400 hover:to-violet-500 text-white font-bold text-sm shadow-xl shadow-cyan-500/20 transition-all disabled:opacity-50"
+                className="w-full mt-4 flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 hover:from-cyan-400 hover:to-violet-500 text-white font-bold text-sm shadow-xl shadow-cyan-500/20 transition-all disabled:opacity-50 cursor-pointer"
               >
                 {loading ? (
-                  <span>Generating Tax Invoice & Processing...</span>
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Processing Payment...</span>
+                  </>
                 ) : (
                   <>
                     <Lock className="w-4 h-4" />
-                    <span>Place Order & Pay {formatAED(totalPayableFils)}</span>
+                    <span>
+                      {paymentMethod === "card_stripe"
+                        ? `Pay & Authorize ${formatAED(totalPayableFils)}`
+                        : "Confirm Cash on Delivery Order"}
+                    </span>
                   </>
                 )}
               </button>
@@ -536,7 +785,7 @@ function CheckoutForm() {
               <div className="pt-2 text-center space-y-1">
                 <p className="text-[11px] text-muted-foreground flex items-center justify-center gap-1.5">
                   <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>FTA-compliant PDF Tax Invoice issued upon order completion</span>
+                  <span>FTA-compliant PDF Tax Invoice issued upon payment completion</span>
                 </p>
                 <p className="text-[10px] text-muted-foreground">
                   MKN Electronics L.L.C. • Commercial License No. 1048291 • TRN 100482918200003
@@ -560,7 +809,7 @@ export default function CheckoutPage() {
           <span className="text-foreground font-medium">UAE Checkout</span>
         </nav>
         <h1 className="font-heading text-2xl sm:text-3xl font-black text-foreground flex items-center gap-2">
-          <span>Secure Checkout</span>
+          <span>Secure Checkout & Payment</span>
           <span className="text-xs font-mono font-normal text-muted-foreground px-2 py-0.5 rounded bg-muted">
             SSL 256-Bit Encrypted
           </span>

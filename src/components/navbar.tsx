@@ -24,6 +24,8 @@ import {
 import { useCart } from "@/components/cart-provider";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { CartDrawer } from "@/components/cart-drawer";
+import { getCurrentUserAction } from "@/app/actions/auth";
+import type { AuthUser } from "@/lib/services/auth-service";
 
 const CATEGORIES = [
   { name: "All Catalogue", href: "/catalogue", icon: SlidersHorizontal },
@@ -40,6 +42,11 @@ export function Navbar() {
   const [searchQuery, setSearchQuery] = React.useState("");
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const [isScrolled, setIsScrolled] = React.useState(false);
+  const [currentUser, setCurrentUser] = React.useState<AuthUser | null>(null);
+
+  React.useEffect(() => {
+    getCurrentUserAction().then(setCurrentUser).catch(() => {});
+  }, []);
 
   React.useEffect(() => {
     const handleScroll = () => {
@@ -86,11 +93,11 @@ export function Navbar() {
                 <span>Al Quoz Industrial 1, Dubai, UAE</span>
               </span>
               <a
-                href="tel:+97143982211"
+                href="tel:+971561036858"
                 className="hidden sm:flex items-center gap-1 text-[11px] hover:text-cyan-400 transition-colors"
               >
                 <Phone className="w-3 h-3 text-violet-400" />
-                <span>+971 4 398 2211</span>
+                <span>+971 56 103 6858</span>
               </a>
               <span className="font-mono text-cyan-400 font-semibold px-1.5 py-0.5 rounded bg-cyan-500/10 text-[10px] border border-cyan-500/20">
                 AED (د.إ)
@@ -171,8 +178,25 @@ export function Navbar() {
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border/60 hover:border-cyan-500/40 hover:bg-accent/40 text-sm font-medium text-foreground transition-all"
               >
                 <User className="w-4 h-4 text-cyan-400" />
-                <span className="hidden xl:inline text-xs">Account</span>
+                <span className="hidden xl:inline text-xs">
+                  {currentUser ? currentUser.name.split(" ")[0] : "Account"}
+                </span>
               </Link>
+
+              {/* Elevated Admin Shortcut if logged in as Admin or Staff */}
+              {currentUser && (currentUser.role === "admin" || currentUser.role === "staff") && (
+                <Link
+                  href="/admin"
+                  className={`hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border transition-all ${
+                    currentUser.role === "admin"
+                      ? "bg-violet-500/15 border-violet-500/30 text-violet-400 hover:bg-violet-500/25"
+                      : "bg-amber-500/15 border-amber-500/30 text-amber-400 hover:bg-amber-500/25"
+                  }`}
+                  title="Open Admin Management Console"
+                >
+                  <span className="text-[10px]">{currentUser.role === "admin" ? "👑 Admin" : "💼 Staff"}</span>
+                </Link>
+              )}
 
               {/* Cart Drawer Button */}
               <button
@@ -209,14 +233,16 @@ export function Navbar() {
                 </Link>
               );
             })}
-            <div className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
-              <Link
-                href="/admin"
-                className="text-[11px] font-mono px-2 py-0.5 rounded border border-border/60 hover:border-cyan-500/40 text-muted-foreground hover:text-cyan-400 transition-colors"
-              >
-                Admin Portal →
-              </Link>
-            </div>
+            {currentUser && (currentUser.role === "admin" || currentUser.role === "staff") && (
+              <div className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
+                <Link
+                  href="/admin"
+                  className="text-[11px] font-mono px-2 py-0.5 rounded border border-border/60 hover:border-cyan-500/40 text-muted-foreground hover:text-cyan-400 transition-colors"
+                >
+                  Admin Portal →
+                </Link>
+              </div>
+            )}
           </nav>
         </div>
 
@@ -266,13 +292,15 @@ export function Navbar() {
               >
                 Track Orders
               </Link>
-              <Link
-                href="/admin"
-                onClick={() => setMobileMenuOpen(false)}
-                className="col-span-2 p-2 rounded-lg bg-muted text-center font-mono text-[11px] text-muted-foreground"
-              >
-                Admin Dashboard
-              </Link>
+              {currentUser && (currentUser.role === "admin" || currentUser.role === "staff") && (
+                <Link
+                  href="/admin"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="col-span-2 p-2 rounded-lg bg-cyan-500/10 border border-cyan-500/25 text-center font-mono text-[11px] text-cyan-400 font-bold"
+                >
+                  {currentUser.role === "admin" ? "👑 Admin Management Console" : "💼 Operations Staff Portal"}
+                </Link>
+              )}
             </div>
           </div>
         )}
