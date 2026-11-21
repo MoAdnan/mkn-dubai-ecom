@@ -1,11 +1,15 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import type { Database } from "@/types/database";
 
 export async function createClient() {
   const cookieStore = await cookies();
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://icqovongnsiianjdxdzg.supabase.co";
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "dummy-anon-key-for-prerendering";
+
+  return createServerClient<Database>(
+    supabaseUrl,
+    supabaseKey,
     {
       cookies: {
         getAll: () => cookieStore.getAll(),
@@ -16,6 +20,26 @@ export async function createClient() {
             );
           } catch {}
         },
+      },
+    }
+  );
+}
+
+/**
+ * Service Role client for administrative actions and webhooks.
+ * Never expose or call from the browser.
+ */
+export function createAdminClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://icqovongnsiianjdxdzg.supabase.co";
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "dummy-service-role-key";
+
+  return createServerClient<Database>(
+    supabaseUrl,
+    serviceKey,
+    {
+      cookies: {
+        getAll: () => [],
+        setAll: () => {},
       },
     }
   );
