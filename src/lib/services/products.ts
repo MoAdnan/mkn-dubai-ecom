@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/client";
-import { DEMO_PRODUCTS, DEMO_CATEGORIES, DEMO_BRANDS, type DemoProduct } from "@/lib/products-data";
+import { getStoredProducts, type StoredOrder } from "@/lib/services/persistent-store";
+import { DEMO_CATEGORIES, DEMO_BRANDS, type DemoProduct } from "@/lib/products-data";
 
 export interface GetProductsParams {
   category?: string;
@@ -12,6 +13,8 @@ export interface GetProductsParams {
 }
 
 export async function getProducts(params: GetProductsParams = {}): Promise<DemoProduct[]> {
+  const stored = getStoredProducts();
+
   try {
     const supabase = createClient();
     let query = supabase
@@ -31,7 +34,7 @@ export async function getProducts(params: GetProductsParams = {}): Promise<DemoP
 
     const { data, error } = await query;
     if (error || !data || data.length === 0) {
-      return filterDemoProducts(DEMO_PRODUCTS, params);
+      return filterDemoProducts(stored, params);
     }
 
     // Map Supabase rows to uniform DemoProduct interface
@@ -77,7 +80,7 @@ export async function getProducts(params: GetProductsParams = {}): Promise<DemoP
 
     return filterDemoProducts(mapped, params);
   } catch (err) {
-    return filterDemoProducts(DEMO_PRODUCTS, params);
+    return filterDemoProducts(stored, params);
   }
 }
 
@@ -152,4 +155,3 @@ function filterDemoProducts(products: DemoProduct[], params: GetProductsParams):
 
   return list;
 }
-

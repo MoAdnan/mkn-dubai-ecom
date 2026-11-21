@@ -1,9 +1,10 @@
 "use server";
 
 import { z } from "zod";
+import { revalidatePath } from "next/cache";
 import { calculateUAEOrderTax } from "@/lib/invoice/tax-engine";
 import { getPaymentGateway } from "@/lib/payments/gateway";
-import { DEMO_PRODUCTS } from "@/lib/products-data";
+import { getStoredProducts, saveStoredOrder } from "@/lib/services/persistent-store";
 import { aedToFils } from "@/lib/utils";
 
 const CheckoutSchema = z.object({
@@ -43,11 +44,13 @@ export async function processCheckoutAction(input: CheckoutInput) {
   // 1. Validate inputs with Zod
   const validated = CheckoutSchema.parse(input);
 
-  // 2. Resolve items & prices securely on server (Never trust client prices)
+  // 2. Resolve items & prices securely on server from persistent store
+  const currentProducts = getStoredProducts();
+
   const resolvedItems = validated.items.map((cartItem) => {
-    const product = DEMO_PRODUCTS.find((p) => p.id === cartItem.productId);
+    const product = currentProducts.find((p) => p.id === cartItem.productId);
     if (!product) {
-      throw new Error(`Product not found: ${cartItem.productId}`);
+      throw new Error(`Product not found in store: ${cartItem.productId}`);
     }
 
     const variant = cartItem.variantId
@@ -127,6 +130,58 @@ export async function processCheckoutAction(input: CheckoutInput) {
     },
   });
 
+  // 8. PERSIST THE REAL ORDER & TAX INVOICE
+  const now = new Date();
+  const dateFormatted = new Intl.DateTimeFormat("en-AE", {
+    timeZone: "Asia/Dubai",
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  }).format(now);
+
+  saveStoredOrder({
+    id: `ord-${randomSuffix}`,
+    orderNumber,
+    invoiceNumber,
+    customer: validated.fullName,
+    email: validated.email,
+    phone: validated.phone,
+    emirate: validated.emirate,
+    address: `${validated.streetAddress}, ${validated.area}${
+      validated.buildingName ? `, ${validated.buildingName}` : ""
+    }${validated.apartmentNumber ? `, ${validated.apartmentNumber}` : ""}`,
+    items: resolvedItems.map((it) => ({
+      title: it.title,
+      sku: it.sku,
+      quantity: it.quantity,
+      priceFils: it.unitPriceFils,
+    })),
+    itemsSummary: resolvedItems.map((it) => `${it.title} (x${it.quantity})`).join(", "),
+    subtotalFils: taxSummary.subtotalFils,
+    vatFils: taxSummary.vatFils,
+    shippingFils: taxSummary.shippingFils,
+    discountFils: taxSummary.discountFils,
+    totalFils: taxSummary.totalFils,
+    paymentMethod: validated.paymentMethod,
+    paymentStatus: validated.paymentMethod === "card_stripe" ? "paid" : "pending",
+    orderStatus: "processing",
+    trackingNumber: `${validated.emirate.slice(0, 3).toUpperCase()}-EXP-${randomSuffix}`,
+    courierName:
+      validated.deliveryMethod === "express"
+        ? "Dubai Same-Day Express"
+        : "Emirates Standard Courier",
+    date: dateFormatted,
+    createdAt: now.toISOString(),
+    isB2B: Boolean(validated.customerTRN?.trim()),
+    customerTRN: validated.customerTRN,
+  });
+
+  revalidatePath("/admin/orders");
+  revalidatePath("/admin/invoices");
+  revalidatePath("/admin");
+  revalidatePath("/account/orders");
+  revalidatePath("/account");
+
   return {
     success: true,
     orderNumber,
@@ -141,4 +196,3 @@ export async function processCheckoutAction(input: CheckoutInput) {
     invoiceType: taxSummary.invoiceType,
   };
 }
-
