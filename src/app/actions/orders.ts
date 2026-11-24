@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { getCurrentUserAction } from "@/app/actions/auth";
 import {
   getStoredOrders,
   getStoredOrderByNumber,
@@ -38,9 +39,95 @@ export async function getAdminInvoicesAction(): Promise<StoredInvoice[]> {
 }
 
 export async function getCustomerOrdersAction(email?: string): Promise<StoredOrder[]> {
+  let targetEmail = email;
+  if (!targetEmail) {
+    const user = await getCurrentUserAction();
+    if (!user) return [];
+    if (user.role === "admin" || user.role === "staff") {
+      return getStoredOrders();
+    }
+    targetEmail = user.email;
+  }
+
   const all = getStoredOrders();
-  if (!email) return all;
-  const filtered = all.filter((o) => o.email.toLowerCase() === email.toLowerCase());
-  return filtered.length > 0 ? filtered : all;
+  const filtered = all.filter((o) => o.email.toLowerCase() === targetEmail.toLowerCase());
+  return filtered;
+}
+
+export interface CustomerSummary {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  emirate: string;
+  ordersCount: number;
+  totalSpentFils: number;
+  isB2B: boolean;
+  trn: string | null;
+  isBlocked: boolean;
+  lastOrderDate?: string;
+}
+
+export async function getAdminCustomersAction(): Promise<CustomerSummary[]> {
+  const orders = getStoredOrders();
+  const customerMap = new Map<string, CustomerSummary>();
+
+  // Baseline verified registered user
+  customerMap.set("adnan@example.ae", {
+    id: "cust-adnan",
+    name: "Adnan Al-Hashimi",
+    email: "adnan@example.ae",
+    phone: "+971 50 123 4567",
+    emirate: "Dubai",
+    ordersCount: 0,
+    totalSpentFils: 0,
+    isB2B: true,
+    trn: "100482918200003",
+    isBlocked: false,
+  });
+
+  customerMap.set("sarah@example.ae", {
+    id: "cust-sarah",
+    name: "Sarah Al-Mansoori",
+    email: "sarah@example.ae",
+    phone: "+971 52 987 6543",
+    emirate: "Abu Dhabi",
+    ordersCount: 0,
+    totalSpentFils: 0,
+    isB2B: false,
+    trn: null,
+    isBlocked: false,
+  });
+
+  // Aggregate dynamically from real orders in persistent store
+  for (const order of orders) {
+    const key = order.email.toLowerCase().trim();
+    const existing = customerMap.get(key);
+    if (existing) {
+      existing.ordersCount += 1;
+      existing.totalSpentFils += order.totalFils;
+      existing.lastOrderDate = order.date;
+      if (order.customerTRN) {
+        existing.isB2B = true;
+        existing.trn = order.customerTRN;
+      }
+    } else {
+      customerMap.set(key, {
+        id: `cust-${order.id}`,
+        name: order.customer,
+        email: order.email,
+        phone: order.phone,
+        emirate: order.emirate,
+        ordersCount: 1,
+        totalSpentFils: order.totalFils,
+        isB2B: Boolean(order.isB2B || order.customerTRN),
+        trn: order.customerTRN || null,
+        isBlocked: false,
+        lastOrderDate: order.date,
+      });
+    }
+  }
+
+  return Array.from(customerMap.values());
 }
 

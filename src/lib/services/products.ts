@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/client";
-import { getStoredProducts, type StoredOrder } from "@/lib/services/persistent-store";
-import { DEMO_CATEGORIES, DEMO_BRANDS, type DemoProduct } from "@/lib/products-data";
+import { getStoredProducts } from "@/lib/services/persistent-store";
+import type { DemoProduct } from "@/lib/products-data";
 
 export interface GetProductsParams {
   category?: string;
@@ -13,8 +13,6 @@ export interface GetProductsParams {
 }
 
 export async function getProducts(params: GetProductsParams = {}): Promise<DemoProduct[]> {
-  const stored = getStoredProducts();
-
   try {
     const supabase = createClient();
     let query = supabase
@@ -33,7 +31,15 @@ export async function getProducts(params: GetProductsParams = {}): Promise<DemoP
     }
 
     const { data, error } = await query;
-    if (error || !data || data.length === 0) {
+    if (error) {
+      console.warn("Supabase products query error:", error.message);
+      // Check local store as fallback
+      const stored = getStoredProducts();
+      return filterDemoProducts(stored, params);
+    }
+
+    if (!data || data.length === 0) {
+      const stored = getStoredProducts();
       return filterDemoProducts(stored, params);
     }
 
@@ -80,6 +86,8 @@ export async function getProducts(params: GetProductsParams = {}): Promise<DemoP
 
     return filterDemoProducts(mapped, params);
   } catch (err) {
+    console.error("Products service error:", err);
+    const stored = getStoredProducts();
     return filterDemoProducts(stored, params);
   }
 }

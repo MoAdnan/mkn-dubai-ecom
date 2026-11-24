@@ -4,7 +4,8 @@ import type { Database } from "@/types/database";
 
 export async function createClient() {
   const cookieStore = await cookies();
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://icqovongnsiianjdxdzg.supabase.co";
+  const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://icqovongnsiianjdxdzg.supabase.co";
+  const supabaseUrl = rawUrl.replace(/\/rest\/v1\/?$/, "").replace(/\/$/, "");
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "dummy-anon-key-for-prerendering";
 
   return createServerClient<Database>(
@@ -30,7 +31,8 @@ export async function createClient() {
  * Never expose or call from the browser.
  */
 export function createAdminClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://icqovongnsiianjdxdzg.supabase.co";
+  const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://icqovongnsiianjdxdzg.supabase.co";
+  const supabaseUrl = rawUrl.replace(/\/rest\/v1\/?$/, "").replace(/\/$/, "");
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "dummy-service-role-key";
 
   return createServerClient<Database>(

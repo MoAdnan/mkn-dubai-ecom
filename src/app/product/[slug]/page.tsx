@@ -13,8 +13,10 @@ interface ProductPageProps {
 
 export async function generateStaticParams() {
   const products = await getProducts();
-  const list: DemoProduct[] = products && products.length > 0 ? products : DEMO_PRODUCTS;
-  return list.map((p) => ({ slug: p.slug }));
+  if (products.length > 0) {
+    return products.map((p) => ({ slug: p.slug }));
+  }
+  return [{ slug: "preview" }];
 }
 
 export async function generateMetadata({

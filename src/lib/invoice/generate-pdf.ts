@@ -61,8 +61,8 @@ export function generateTaxInvoicePDF(data: InvoiceData): jsPDF {
   doc.setFont("helvetica", "bold");
   const title =
     data.invoiceType === "full"
-      ? "TAX INVOICE / فاتورة ضريبية"
-      : "SIMPLIFIED TAX INVOICE / فاتورة ضريبية مبسطة";
+      ? "TAX INVOICE"
+      : "SIMPLIFIED TAX INVOICE";
   doc.text(title, 14, 18);
 
   doc.setFontSize(9);
@@ -74,7 +74,7 @@ export function generateTaxInvoicePDF(data: InvoiceData): jsPDF {
   doc.setTextColor(30, 41, 59);
   doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
-  doc.text("SUPPLIER / المورّد:", 14, 50);
+  doc.text("SUPPLIER DETAILS:", 14, 50);
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8.5);
@@ -87,7 +87,7 @@ export function generateTaxInvoicePDF(data: InvoiceData): jsPDF {
   const custX = 115;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
-  doc.text("CUSTOMER / العميل:", custX, 50);
+  doc.text("CUSTOMER DETAILS:", custX, 50);
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8.5);

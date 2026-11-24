@@ -200,11 +200,6 @@ export function Footer() {
                   UAE Tax & VAT Invoicing
                 </Link>
               </li>
-              <li>
-                <Link href="/admin" className="text-xs text-muted-foreground/80 hover:text-cyan-400 transition-colors font-mono">
-                  Merchant Admin Area
-                </Link>
-              </li>
             </ul>
           </div>
         </div>

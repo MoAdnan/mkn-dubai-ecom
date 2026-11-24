@@ -71,7 +71,7 @@ export function HeroShowcase({ products }: HeroShowcaseProps) {
     ? "Special Dubai Deal"
     : current.is_featured
     ? "Featured Flagship"
-    : "Official UAE Stock";
+    : "Original Stock";
 
   return (
     <div className="w-full max-w-lg mx-auto relative flex flex-col items-center">

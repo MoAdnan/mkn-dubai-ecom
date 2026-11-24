@@ -275,6 +275,25 @@ export function ProductDetailView({
             </p>
           </div>
 
+          {/* Tabby Pay in 4 Widget */}
+          <div className="p-3.5 rounded-2xl bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2.5">
+              <span className="font-heading font-black text-sm tracking-tight px-2 py-0.5 rounded-lg bg-emerald-500 text-slate-950">
+                tabby
+              </span>
+              <span className="text-foreground leading-tight">
+                Or 4 interest-free payments of{" "}
+                <strong className="font-mono text-emerald-400 font-bold">
+                  {formatAED(Math.round(activePriceFils / 4))}
+                </strong>
+                . No fees, Sharia-compliant.
+              </span>
+            </div>
+            <span className="text-[10px] text-muted-foreground whitespace-nowrap hidden sm:inline">
+              Learn more →
+            </span>
+          </div>
+
           {/* Variants Selector */}
           {product.variants.length > 0 && (
             <div className="space-y-3">

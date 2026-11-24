@@ -41,7 +41,7 @@ export function TrendingProducts({ products }: { products: DemoProduct[] }) {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
         <div>
           <div className="inline-flex items-center gap-1 text-cyan-400 text-xs font-semibold uppercase tracking-wider mb-2">
-            <span>Official UAE Stock</span>
+            <span>Original Stock</span>
           </div>
           <h2 className="font-heading text-2xl sm:text-3xl font-black text-foreground">
             Trending Electronics

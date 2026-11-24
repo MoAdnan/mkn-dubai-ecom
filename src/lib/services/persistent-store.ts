@@ -23,7 +23,7 @@ export interface StoredOrder {
   shippingFils: number;
   discountFils: number;
   totalFils: number;
-  paymentMethod: "card_stripe" | "cod";
+  paymentMethod: "card_stripe" | "cod" | "tabby";
   paymentStatus: "paid" | "pending" | "refunded";
   cardLast4?: string;
   cardBrand?: string;
@@ -111,12 +111,7 @@ function saveStoreData(data: StoreData): void {
 
 export function getStoredProducts(): DemoProduct[] {
   const data = getStoreData();
-  if (!data.products || data.products.length === 0) {
-    data.products = [...DEMO_PRODUCTS];
-    saveStoreData(data);
-    return data.products;
-  }
-  return data.products;
+  return data.products || [];
 }
 
 export function saveStoredProduct(product: DemoProduct): DemoProduct[] {

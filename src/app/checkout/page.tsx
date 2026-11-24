@@ -17,7 +17,8 @@ import {
   Loader2,
   Building2,
   Shield,
-  HelpCircle,
+  Layers,
+  Calendar,
 } from "lucide-react";
 import { useCart } from "@/components/cart-provider";
 import { formatAED, aedToFils } from "@/lib/utils";
@@ -53,7 +54,7 @@ function CheckoutForm() {
   const [companyName, setCompanyName] = React.useState("");
   const [customerTRN, setCustomerTRN] = React.useState("");
   const [deliveryMethod, setDeliveryMethod] = React.useState<"standard" | "express">("express");
-  const [paymentMethod, setPaymentMethod] = React.useState<"card_stripe" | "cod">("card_stripe");
+  const [paymentMethod, setPaymentMethod] = React.useState<"card_stripe" | "tabby" | "cod">("card_stripe");
   const [couponCode, setCouponCode] = React.useState(prefilledCoupon);
 
   // Card Payment Details State
@@ -73,6 +74,9 @@ function CheckoutForm() {
   // Delivery calculation
   const shippingFils = deliveryMethod === "express" ? 3500 : subtotalFils >= 25000 ? 0 : 2000;
 
+  // COD Handling Fee in UAE (Standard AED 15 courier fee, waived when paying online)
+  const codFeeFils = paymentMethod === "cod" ? 1500 : 0;
+
   // Coupon discount calculation
   const discountFils = React.useMemo(() => {
     if (!couponCode) return 0;
@@ -87,7 +91,8 @@ function CheckoutForm() {
     return 0;
   }, [couponCode, subtotalFils]);
 
-  const totalPayableFils = Math.max(0, subtotalFils + shippingFils - discountFils);
+  const totalPayableFils = Math.max(0, subtotalFils + shippingFils + codFeeFils - discountFils);
+  const tabbyInstallmentFils = Math.round(totalPayableFils / 4);
 
   // Card formatters
   const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -135,8 +140,15 @@ function CheckoutForm() {
         throw new Error("Your cart is empty. Please add items before checking out.");
       }
 
-      // If Card Payment, show interactive payment verification stages
-      if (paymentMethod === "card_stripe") {
+      // Check COD limit (standard Dubai courier threshold is AED 5,000)
+      if (paymentMethod === "cod" && totalPayableFils > aedToFils(5000)) {
+        throw new Error(
+          "Cash on Delivery is limited to AED 5,000 as per UAE courier safety limits. Please select Card or Tabby for this high-value order."
+        );
+      }
+
+      // If Card or Tabby Payment, show interactive payment verification stages
+      if (paymentMethod === "card_stripe" || paymentMethod === "tabby") {
         setPaymentStep("authorizing");
         await new Promise((r) => setTimeout(r, 600));
 
@@ -177,7 +189,7 @@ function CheckoutForm() {
       });
 
       if (res.success) {
-        if (paymentMethod === "card_stripe") {
+        if (paymentMethod === "card_stripe" || paymentMethod === "tabby") {
           setPaymentStep("success");
           await new Promise((r) => setTimeout(r, 400));
         }
@@ -213,7 +225,7 @@ function CheckoutForm() {
 
   return (
     <>
-      {/* 3D Secure / Payment Gateway Processing Modal Overlay */}
+      {/* 3D Secure / Tabby / Payment Gateway Processing Modal Overlay */}
       {paymentStep !== "idle" && (
         <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-md flex items-center justify-center p-4">
           <div className="max-w-md w-full rounded-3xl border border-border/80 bg-card p-8 shadow-2xl space-y-6 text-center animate-in fade-in zoom-in-95 duration-200">
@@ -227,19 +239,43 @@ function CheckoutForm() {
 
             <div className="space-y-1.5">
               <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-                STRIPE 3D SECURE 2.0 GATEWAY
+                {paymentMethod === "tabby"
+                  ? "TABBY BNPL SHARIA COMPLIANT"
+                  : "STRIPE 3D SECURE 2.0 GATEWAY"}
               </span>
               <h3 className="font-heading font-black text-xl text-foreground">
-                {paymentStep === "authorizing" && "Authorizing Card..."}
-                {paymentStep === "3ds_verifying" && "3D Secure 2.0 Bank Verification"}
-                {paymentStep === "capturing" && "Capturing Payment in AED..."}
-                {paymentStep === "success" && "Payment Succeeded!"}
+                {paymentMethod === "tabby" ? (
+                  <>
+                    {paymentStep === "authorizing" && "Connecting to Tabby..."}
+                    {paymentStep === "3ds_verifying" && "Verifying UAE Mobile OTP..."}
+                    {paymentStep === "capturing" && "4 Installments Approved!"}
+                    {paymentStep === "success" && "Tabby Order Confirmed!"}
+                  </>
+                ) : (
+                  <>
+                    {paymentStep === "authorizing" && "Authorizing Card..."}
+                    {paymentStep === "3ds_verifying" && "3D Secure 2.0 Bank Verification"}
+                    {paymentStep === "capturing" && "Capturing Payment in AED..."}
+                    {paymentStep === "success" && "Payment Succeeded!"}
+                  </>
+                )}
               </h3>
               <p className="text-xs text-muted-foreground">
-                {paymentStep === "authorizing" && `Contacting payment gateway for card ending in ${cardNumber.slice(-4)}...`}
-                {paymentStep === "3ds_verifying" && "Authenticating with UAE Central Bank secure payment network..."}
-                {paymentStep === "capturing" && `Securing payment of ${formatAED(totalPayableFils)}...`}
-                {paymentStep === "success" && "Transaction approved. Generating official FTA Tax Invoice..."}
+                {paymentMethod === "tabby" ? (
+                  <>
+                    {paymentStep === "authorizing" && `Authenticating mobile number ${phone}...`}
+                    {paymentStep === "3ds_verifying" && "Validating first installment of " + formatAED(tabbyInstallmentFils) + "..."}
+                    {paymentStep === "capturing" && "Payment plan activated: 4 monthly installments."}
+                    {paymentStep === "success" && "Generating official FTA Tax Invoice..."}
+                  </>
+                ) : (
+                  <>
+                    {paymentStep === "authorizing" && `Contacting payment gateway for card ending in ${cardNumber.slice(-4)}...`}
+                    {paymentStep === "3ds_verifying" && "Authenticating with UAE Central Bank secure payment network..."}
+                    {paymentStep === "capturing" && `Securing payment of ${formatAED(totalPayableFils)}...`}
+                    {paymentStep === "success" && "Transaction approved. Generating official FTA Tax Invoice..."}
+                  </>
+                )}
               </p>
             </div>
 
@@ -248,14 +284,14 @@ function CheckoutForm() {
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground flex items-center gap-2">
                   <CreditCard className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>Card Validation</span>
+                  <span>{paymentMethod === "tabby" ? "Tabby Eligibility" : "Card Validation"}</span>
                 </span>
                 <span className="text-emerald-400 font-bold text-[11px]">✓ Verified</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground flex items-center gap-2">
                   <Shield className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>3DS 2.0 Authentication</span>
+                  <span>{paymentMethod === "tabby" ? "UAE Mobile Authorization" : "3DS 2.0 Authentication"}</span>
                 </span>
                 <span className="text-[11px] font-bold text-foreground">
                   {paymentStep === "authorizing" ? "Pending..." : "✓ Approved"}
@@ -521,7 +557,7 @@ function CheckoutForm() {
               </div>
             </div>
 
-            {/* 3. Payment Method with Real Card Gateway Fields */}
+            {/* 3. Payment Method: Card, Tabby BNPL, or COD */}
             <div className="rounded-2xl border border-border/80 bg-card p-6 space-y-4">
               <h2 className="font-heading font-bold text-base text-foreground flex items-center gap-2">
                 <span className="w-6 h-6 rounded-full bg-cyan-500/15 text-cyan-400 text-xs font-mono flex items-center justify-center font-bold">
@@ -562,7 +598,7 @@ function CheckoutForm() {
                     </div>
                   </label>
 
-                  {/* Card Entry Fields (Displayed when Card is selected) */}
+                  {/* Card Entry Fields */}
                   {paymentMethod === "card_stripe" && (
                     <div className="px-4 pb-5 pt-1 space-y-4 border-t border-border/50 animate-in fade-in">
                       <div className="flex items-center justify-between pt-2">
@@ -659,33 +695,126 @@ function CheckoutForm() {
                   )}
                 </div>
 
-                {/* Option B: Cash on Delivery */}
-                <label
-                  className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all ${
-                    paymentMethod === "cod"
-                      ? "border-cyan-500 bg-cyan-500/10 ring-1 ring-cyan-500/30"
+                {/* Option B: Tabby (Pay in 4 Installments) */}
+                <div
+                  className={`rounded-xl border transition-all ${
+                    paymentMethod === "tabby"
+                      ? "border-emerald-500 bg-emerald-500/5 ring-1 ring-emerald-500/30"
                       : "border-border/70 hover:border-border"
                   }`}
                 >
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="radio"
-                      name="payment"
-                      checked={paymentMethod === "cod"}
-                      onChange={() => setPaymentMethod("cod")}
-                      className="text-cyan-500"
-                    />
-                    <div>
-                      <span className="font-bold text-foreground block">
-                        Cash on Delivery (COD)
-                      </span>
-                      <span className="text-[11px] text-muted-foreground">
-                        Pay cash or card to the courier upon delivery anywhere in UAE
-                      </span>
+                  <label className="flex items-center justify-between p-4 cursor-pointer">
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="radio"
+                        name="payment"
+                        checked={paymentMethod === "tabby"}
+                        onChange={() => setPaymentMethod("tabby")}
+                        className="text-emerald-500"
+                      />
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-foreground">
+                            Tabby — Pay in 4 Interest-Free Installments
+                          </span>
+                          <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-emerald-500 text-slate-950">
+                            0% INTEREST
+                          </span>
+                        </div>
+                        <span className="text-[11px] text-muted-foreground">
+                          Split into 4 monthly payments of {formatAED(tabbyInstallmentFils)}. Sharia-compliant.
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                  <Banknote className="w-5 h-5 text-emerald-400" />
-                </label>
+                    <span className="font-black text-sm px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-heading">
+                      tabby
+                    </span>
+                  </label>
+
+                  {/* Tabby Schedule Details */}
+                  {paymentMethod === "tabby" && (
+                    <div className="px-4 pb-4 pt-1 space-y-3 border-t border-border/50 animate-in fade-in">
+                      <p className="text-[11px] text-foreground font-semibold">Payment Schedule Breakdown:</p>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs">
+                        <div className="p-2.5 rounded-xl bg-card border border-emerald-500/30">
+                          <span className="text-[10px] text-muted-foreground block">Today (25%)</span>
+                          <span className="font-mono font-bold text-emerald-400 text-xs">
+                            {formatAED(tabbyInstallmentFils)}
+                          </span>
+                        </div>
+                        <div className="p-2.5 rounded-xl bg-card border border-border/60">
+                          <span className="text-[10px] text-muted-foreground block">In 1 Month</span>
+                          <span className="font-mono font-bold text-foreground text-xs">
+                            {formatAED(tabbyInstallmentFils)}
+                          </span>
+                        </div>
+                        <div className="p-2.5 rounded-xl bg-card border border-border/60">
+                          <span className="text-[10px] text-muted-foreground block">In 2 Months</span>
+                          <span className="font-mono font-bold text-foreground text-xs">
+                            {formatAED(tabbyInstallmentFils)}
+                          </span>
+                        </div>
+                        <div className="p-2.5 rounded-xl bg-card border border-border/60">
+                          <span className="text-[10px] text-muted-foreground block">In 3 Months</span>
+                          <span className="font-mono font-bold text-foreground text-xs">
+                            {formatAED(tabbyInstallmentFils)}
+                          </span>
+                        </div>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">
+                        You will be authorized securely using your UAE mobile number ({phone}). No credit check, no paperwork.
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Option C: Cash on Delivery (COD) */}
+                <div
+                  className={`rounded-xl border transition-all ${
+                    paymentMethod === "cod"
+                      ? "border-cyan-500 bg-cyan-500/5 ring-1 ring-cyan-500/30"
+                      : "border-border/70 hover:border-border"
+                  }`}
+                >
+                  <label className="flex items-center justify-between p-4 cursor-pointer">
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="radio"
+                        name="payment"
+                        checked={paymentMethod === "cod"}
+                        onChange={() => setPaymentMethod("cod")}
+                        className="text-cyan-500"
+                      />
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-foreground">
+                            Cash / Card on Delivery (COD)
+                          </span>
+                          <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                            +AED 15.00 FEE
+                          </span>
+                        </div>
+                        <span className="text-[11px] text-muted-foreground">
+                          Pay cash or tap card via courier POS machine upon arrival at your doorstep
+                        </span>
+                      </div>
+                    </div>
+                    <Banknote className="w-5 h-5 text-emerald-400" />
+                  </label>
+
+                  {paymentMethod === "cod" && (
+                    <div className="px-4 pb-4 pt-1 space-y-2 border-t border-border/50 animate-in fade-in text-xs">
+                      <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-[11px] space-y-1">
+                        <p className="font-semibold">🇦🇪 How Cash on Delivery Works in the UAE (Noon/Amazon Model):</p>
+                        <p className="text-[10px] text-muted-foreground leading-relaxed">
+                          • Our courier carries cash collection bags and a wireless POS terminal (card on delivery supported).<br />
+                          • Standard courier cash transit fee of AED 15.00 applies.<br />
+                          • <strong className="text-foreground">Pro-Tip:</strong> Pay online via Card or Tabby to waive the AED 15 courier fee!
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -746,6 +875,13 @@ function CheckoutForm() {
                   </span>
                 </div>
 
+                {paymentMethod === "cod" && (
+                  <div className="flex justify-between text-amber-400 font-medium">
+                    <span>COD Courier Transit Surcharge</span>
+                    <span className="font-mono">+{formatAED(codFeeFils)}</span>
+                  </div>
+                )}
+
                 <div className="flex justify-between text-muted-foreground">
                   <span>5% UAE VAT (Included in subtotal)</span>
                   <span className="font-mono">{formatAED(vatFils)}</span>
@@ -757,6 +893,15 @@ function CheckoutForm() {
                     {formatAED(totalPayableFils)}
                   </span>
                 </div>
+
+                {paymentMethod === "tabby" && (
+                  <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-between text-xs">
+                    <span className="text-foreground font-semibold">Pay Today with Tabby:</span>
+                    <span className="font-mono font-black text-emerald-400">
+                      {formatAED(tabbyInstallmentFils)}
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Complete Order Button */}
@@ -774,9 +919,9 @@ function CheckoutForm() {
                   <>
                     <Lock className="w-4 h-4" />
                     <span>
-                      {paymentMethod === "card_stripe"
-                        ? `Pay & Authorize ${formatAED(totalPayableFils)}`
-                        : "Confirm Cash on Delivery Order"}
+                      {paymentMethod === "card_stripe" && `Pay & Authorize ${formatAED(totalPayableFils)}`}
+                      {paymentMethod === "tabby" && `Pay ${formatAED(tabbyInstallmentFils)} with Tabby (4 Payments)`}
+                      {paymentMethod === "cod" && `Confirm Cash on Delivery (${formatAED(totalPayableFils)})`}
                     </span>
                   </>
                 )}

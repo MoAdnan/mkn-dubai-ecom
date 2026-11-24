@@ -9,6 +9,7 @@ export interface AuthUser {
   companyName?: string;
   trn?: string;
   emirate: string;
+  isPhoneVerified?: boolean;
 }
 
 export const PRESET_USERS: Record<UserRole, AuthUser> = {

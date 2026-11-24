@@ -100,13 +100,18 @@ export default function AdminLayout({
     try {
       await logoutAction();
       setUser(null);
-      router.push("/account/login");
+      router.push("/admin/login");
     } catch (err) {
       console.error("Logout error:", err);
     } finally {
       setActionLoading(false);
     }
   };
+
+  // If user is accessing the dedicated admin login page, bypass layout check
+  if (pathname === "/admin/login") {
+    return <>{children}</>;
+  }
 
   // 1. Loading state
   if (user === undefined) {
@@ -209,16 +214,16 @@ export default function AdminLayout({
 
           <div className="flex flex-col sm:flex-row gap-2 pt-1">
             <Link
-              href={`/account/login?redirect=${encodeURIComponent(pathname)}`}
-              className="flex-1 py-2.5 px-4 rounded-xl border border-border/80 hover:bg-muted text-xs font-semibold text-center transition-colors"
-            >
-              Sign In with Password
-            </Link>
-            <Link
-              href="/account"
+              href={`/admin/login?redirect=${encodeURIComponent(pathname)}`}
               className="flex-1 py-2.5 px-4 rounded-xl bg-primary text-primary-foreground text-xs font-semibold text-center hover:opacity-90 transition-opacity"
             >
-              Go to Customer Account
+              Sign In to Admin Portal →
+            </Link>
+            <Link
+              href="/"
+              className="flex-1 py-2.5 px-4 rounded-xl border border-border/80 hover:bg-muted text-xs font-semibold text-center transition-colors"
+            >
+              Return to Storefront
             </Link>
           </div>
 

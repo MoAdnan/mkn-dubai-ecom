@@ -9,6 +9,7 @@ import {
   saveStoredOrder,
   reduceProductStock,
 } from "@/lib/services/persistent-store";
+import { getProducts } from "@/lib/services/products";
 import { aedToFils } from "@/lib/utils";
 import { createAdminClient } from "@/lib/supabase/server";
 
@@ -32,7 +33,7 @@ const CheckoutSchema = z.object({
   customerTRN: z.string().optional(),
   companyName: z.string().optional(),
   deliveryMethod: z.enum(["standard", "express"]),
-  paymentMethod: z.enum(["card_stripe", "cod"]),
+  paymentMethod: z.enum(["card_stripe", "cod", "tabby"]),
   couponCode: z.string().optional(),
   cardDetails: z
     .object({
@@ -57,8 +58,9 @@ export async function processCheckoutAction(input: CheckoutInput) {
   // 1. Validate inputs with Zod
   const validated = CheckoutSchema.parse(input);
 
-  // 2. Resolve items & prices securely on server from persistent store
-  const currentProducts = getStoredProducts();
+  // 2. Resolve items & prices securely on server from Supabase and persistent store
+  const allLiveProducts = await getProducts();
+  const currentProducts = allLiveProducts.length > 0 ? allLiveProducts : getStoredProducts();
 
   const resolvedItems = validated.items.map((cartItem) => {
     const product = currentProducts.find((p) => p.id === cartItem.productId);
@@ -235,7 +237,7 @@ export async function processCheckoutAction(input: CheckoutInput) {
     discountFils: taxSummary.discountFils,
     totalFils: taxSummary.totalFils,
     paymentMethod: validated.paymentMethod,
-    paymentStatus: validated.paymentMethod === "card_stripe" ? "paid" : "pending",
+    paymentStatus: (validated.paymentMethod === "card_stripe" || validated.paymentMethod === "tabby") ? "paid" : "pending",
     cardLast4,
     cardBrand,
     orderStatus: "processing",

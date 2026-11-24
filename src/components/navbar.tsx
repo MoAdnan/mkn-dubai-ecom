@@ -183,21 +183,6 @@ export function Navbar() {
                 </span>
               </Link>
 
-              {/* Elevated Admin Shortcut if logged in as Admin or Staff */}
-              {currentUser && (currentUser.role === "admin" || currentUser.role === "staff") && (
-                <Link
-                  href="/admin"
-                  className={`hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border transition-all ${
-                    currentUser.role === "admin"
-                      ? "bg-violet-500/15 border-violet-500/30 text-violet-400 hover:bg-violet-500/25"
-                      : "bg-amber-500/15 border-amber-500/30 text-amber-400 hover:bg-amber-500/25"
-                  }`}
-                  title="Open Admin Management Console"
-                >
-                  <span className="text-[10px]">{currentUser.role === "admin" ? "👑 Admin" : "💼 Staff"}</span>
-                </Link>
-              )}
-
               {/* Cart Drawer Button */}
               <button
                 type="button"
@@ -233,16 +218,6 @@ export function Navbar() {
                 </Link>
               );
             })}
-            {currentUser && (currentUser.role === "admin" || currentUser.role === "staff") && (
-              <div className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
-                <Link
-                  href="/admin"
-                  className="text-[11px] font-mono px-2 py-0.5 rounded border border-border/60 hover:border-cyan-500/40 text-muted-foreground hover:text-cyan-400 transition-colors"
-                >
-                  Admin Portal →
-                </Link>
-              </div>
-            )}
           </nav>
         </div>
 
@@ -292,15 +267,6 @@ export function Navbar() {
               >
                 Track Orders
               </Link>
-              {currentUser && (currentUser.role === "admin" || currentUser.role === "staff") && (
-                <Link
-                  href="/admin"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="col-span-2 p-2 rounded-lg bg-cyan-500/10 border border-cyan-500/25 text-center font-mono text-[11px] text-cyan-400 font-bold"
-                >
-                  {currentUser.role === "admin" ? "👑 Admin Management Console" : "💼 Operations Staff Portal"}
-                </Link>
-              )}
             </div>
           </div>
         )}

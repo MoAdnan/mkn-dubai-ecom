@@ -13,21 +13,26 @@ import {
   Building2,
   ShieldCheck,
   ShieldAlert,
-  Sparkles,
   ArrowRight,
-  Store,
-  RefreshCw,
   Loader2,
   Lock,
   Mail,
   Eye,
   EyeOff,
   CheckCircle2,
-  Briefcase,
+  Edit3,
+  Phone,
+  Save,
+  X,
 } from "lucide-react";
 import { formatAED } from "@/lib/utils";
-import { fastLoginAction, loginAction, socialLoginAction, logoutAction } from "@/app/actions/auth";
-import type { AuthUser, UserRole } from "@/lib/services/auth-service";
+import {
+  loginAction,
+  socialLoginAction,
+  logoutAction,
+  updateUserProfileAction,
+} from "@/app/actions/auth";
+import type { AuthUser } from "@/lib/services/auth-service";
 import type { StoredOrder } from "@/lib/services/persistent-store";
 
 function GoogleLogo({ className = "w-5 h-5" }: { className?: string }) {
@@ -76,7 +81,29 @@ export function AccountClient({ initialUser, initialOrders }: AccountClientProps
   const [password, setPassword] = React.useState("");
   const [showPassword, setShowPassword] = React.useState(false);
   const [loginError, setLoginError] = React.useState<string | null>(null);
-  const [showStaffDrawer, setShowStaffDrawer] = React.useState(false);
+
+  // Profile Edit States
+  const [isEditing, setIsEditing] = React.useState(false);
+  const [editName, setEditName] = React.useState(initialUser?.name || "");
+  const [editPhone, setEditPhone] = React.useState(initialUser?.phone || "");
+  const [editEmirate, setEditEmirate] = React.useState(initialUser?.emirate || "Dubai");
+  const [editCompanyName, setEditCompanyName] = React.useState(initialUser?.companyName || "");
+  const [editTrn, setEditTrn] = React.useState(initialUser?.trn || "");
+  const [editNewPassword, setEditNewPassword] = React.useState("");
+  const [updateSuccess, setUpdateSuccess] = React.useState(false);
+  const [updateError, setUpdateError] = React.useState<string | null>(null);
+  const [updating, setUpdating] = React.useState(false);
+
+  React.useEffect(() => {
+    if (initialUser) {
+      setUser(initialUser);
+      setEditName(initialUser.name);
+      setEditPhone(initialUser.phone);
+      setEditEmirate(initialUser.emirate || "Dubai");
+      setEditCompanyName(initialUser.companyName || "");
+      setEditTrn(initialUser.trn || "");
+    }
+  }, [initialUser]);
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -113,19 +140,6 @@ export function AccountClient({ initialUser, initialOrders }: AccountClientProps
     }
   };
 
-  const handleFastLogin = async (role: UserRole) => {
-    setLoading(true);
-    try {
-      const res = await fastLoginAction(role);
-      setUser(res.user);
-      router.refresh();
-    } catch (err) {
-      console.error("Fast login error:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleLogout = async () => {
     setLoading(true);
     try {
@@ -136,6 +150,45 @@ export function AccountClient({ initialUser, initialOrders }: AccountClientProps
       console.error("Logout error:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setUpdateError(null);
+    setUpdateSuccess(false);
+    setUpdating(true);
+
+    try {
+      const res = await updateUserProfileAction({
+        name: editName,
+        phone: editPhone,
+        emirate: editEmirate,
+        companyName: editCompanyName,
+        trn: editTrn,
+        newPassword: editNewPassword.trim() ? editNewPassword.trim() : undefined,
+      });
+
+      if (!res.success) {
+        setUpdateError(res.error || "Failed to update profile.");
+        return;
+      }
+
+      if (res.user) {
+        setUser(res.user);
+      }
+      setUpdateSuccess(true);
+      setIsEditing(false);
+      setEditNewPassword("");
+      router.refresh();
+
+      setTimeout(() => {
+        setUpdateSuccess(false);
+      }, 5000);
+    } catch (err: any) {
+      setUpdateError(err?.message || "Failed to update profile in database.");
+    } finally {
+      setUpdating(false);
     }
   };
 
@@ -239,7 +292,7 @@ export function AccountClient({ initialUser, initialOrders }: AccountClientProps
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -272,89 +325,16 @@ export function AccountClient({ initialUser, initialOrders }: AccountClientProps
               Create an account
             </Link>
           </div>
-
-          {/* UAE Trust Strip */}
-          <div className="pt-4 border-t border-border/40 grid grid-cols-3 gap-2 text-[10px] text-muted-foreground text-center">
-            <div>🔒 256-Bit SSL</div>
-            <div>🇦🇪 FTA VAT Registered</div>
-            <div>🛡️ Official UAE Warranty</div>
-          </div>
-
-          {/* Discreet Internal Staff / Admin Portal Access */}
-          <div className="pt-2 text-center">
-            <button
-              type="button"
-              onClick={() => setShowStaffDrawer(!showStaffDrawer)}
-              className="text-[11px] text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline"
-            >
-              {showStaffDrawer ? "Close staff portal ▲" : "Are you an MKN associate or administrator? Staff Portal Access ▼"}
-            </button>
-
-            {showStaffDrawer && (
-              <div className="mt-4 p-4 rounded-2xl bg-muted/40 border border-border/60 text-left space-y-3 animate-in fade-in duration-200">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-foreground flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                    <span>MKN Internal Staff & Operations Access</span>
-                  </span>
-                  <span className="text-[10px] font-mono text-cyan-400 font-semibold bg-cyan-500/10 px-1.5 py-0.5 rounded border border-cyan-500/20">
-                    TEAM ONLY
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                  <button
-                    type="button"
-                    disabled={loading}
-                    onClick={() => handleFastLogin("staff")}
-                    className="p-3 rounded-xl bg-card border border-border hover:border-amber-500/50 hover:bg-amber-500/5 transition-all text-left group cursor-pointer"
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-bold text-xs text-foreground group-hover:text-amber-400">
-                        💼 Operations Staff
-                      </span>
-                      <span className="text-[9px] font-mono px-1 rounded bg-amber-500/10 text-amber-400">
-                        DISPATCH
-                      </span>
-                    </div>
-                    <p className="text-[10px] text-muted-foreground">
-                      staff@mknelectronics.ae • Orders & Stock
-                    </p>
-                  </button>
-
-                  <button
-                    type="button"
-                    disabled={loading}
-                    onClick={() => handleFastLogin("admin")}
-                    className="p-3 rounded-xl bg-card border border-border hover:border-violet-500/50 hover:bg-violet-500/5 transition-all text-left group cursor-pointer"
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-bold text-xs text-foreground group-hover:text-violet-400">
-                        👑 Executive Admin
-                      </span>
-                      <span className="text-[9px] font-mono px-1 rounded bg-violet-500/10 text-violet-400">
-                        ALL ACCESS
-                      </span>
-                    </div>
-                    <p className="text-[10px] text-muted-foreground">
-                      admin@mknelectronics.ae • Catalog & Settings
-                    </p>
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
         </div>
       </main>
     );
   }
 
   // -------------------------------------------------------------
-  // AUTHENTICATED STATE: Complete Customer Account View
+  // AUTHENTICATED STATE: Live Customer Account View
   // -------------------------------------------------------------
   const isAdmin = user.role === "admin";
   const isStaff = user.role === "staff";
-  const isCustomer = user.role === "customer";
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -385,88 +365,24 @@ export function AccountClient({ initialUser, initialOrders }: AccountClientProps
             Manage your personal profile, UAE delivery addresses, order history, and FTA tax invoices.
           </p>
         </div>
-
-        {/* Quick Team Role Switcher (Only visible to admin/staff) */}
-        {(isAdmin || isStaff) && (
-          <div className="flex items-center gap-1.5 p-1.5 rounded-2xl bg-muted/50 border border-border/60 text-xs self-start md:self-auto">
-            <span className="text-[10px] font-semibold text-muted-foreground px-2 flex items-center gap-1">
-              <RefreshCw className="w-3 h-3 text-cyan-400" />
-              <span>Active Role:</span>
-            </span>
-
-            <button
-              type="button"
-              disabled={loading || isCustomer}
-              onClick={() => handleFastLogin("customer")}
-              className={`px-2.5 py-1 rounded-xl text-[11px] font-medium transition-all ${
-                isCustomer
-                  ? "bg-card text-cyan-400 font-bold shadow-sm border border-cyan-500/30"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              Customer
-            </button>
-
-            <button
-              type="button"
-              disabled={loading || isStaff}
-              onClick={() => handleFastLogin("staff")}
-              className={`px-2.5 py-1 rounded-xl text-[11px] font-medium transition-all ${
-                isStaff
-                  ? "bg-card text-amber-400 font-bold shadow-sm border border-amber-500/30"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              Staff
-            </button>
-
-            <button
-              type="button"
-              disabled={loading || isAdmin}
-              onClick={() => handleFastLogin("admin")}
-              className={`px-2.5 py-1 rounded-xl text-[11px] font-medium transition-all ${
-                isAdmin
-                  ? "bg-card text-violet-400 font-bold shadow-sm border border-violet-500/30"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              Admin
-            </button>
-          </div>
-        )}
       </div>
 
-      {/* Prominent Elevated Admin/Staff Access Banner */}
-      {(isAdmin || isStaff) && (
-        <div className="mb-8 p-5 rounded-3xl bg-gradient-to-r from-cyan-500/10 via-violet-500/10 to-amber-500/10 border border-cyan-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg shadow-cyan-500/5">
-          <div className="flex items-start sm:items-center gap-3.5">
-            <div className="w-10 h-10 rounded-2xl bg-cyan-500/20 border border-cyan-500/40 text-cyan-400 flex items-center justify-center font-bold flex-shrink-0">
-              {isAdmin ? "👑" : "💼"}
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-heading font-black text-sm sm:text-base text-foreground">
-                  {isAdmin ? "Executive Administrator Access" : "Operations Staff Portal Access"}
-                </h3>
-                <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[10px] font-mono font-bold border border-emerald-500/20">
-                  AUTHORIZED
-                </span>
-              </div>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {isAdmin
-                  ? "You have full administrative privileges to manage products, pricing, stock levels, orders, and UAE tax invoices."
-                  : "You have operational permissions to process incoming customer orders, manage stock dispatch, and view fulfillment."}
-              </p>
-            </div>
+      {/* Success Notification */}
+      {updateSuccess && (
+        <div className="mb-6 p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-center gap-3">
+          <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
+          <div>
+            <span className="font-bold block">Account Updated!</span>
+            <span>Your name, mobile phone, and profile details have been successfully synced to the database.</span>
           </div>
+        </div>
+      )}
 
-          <Link
-            href="/admin"
-            className="flex-shrink-0 inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 text-white font-bold text-xs shadow-md shadow-cyan-500/20 hover:opacity-95 transition-all"
-          >
-            <span>Launch Admin Portal</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
+      {/* Error Notification */}
+      {updateError && (
+        <div className="mb-6 p-4 rounded-2xl bg-destructive/10 border border-destructive/30 text-destructive text-xs flex items-center gap-3">
+          <ShieldAlert className="w-5 h-5 flex-shrink-0" />
+          <span>{updateError}</span>
         </div>
       )}
 
@@ -537,7 +453,7 @@ export function AccountClient({ initialUser, initialOrders }: AccountClientProps
                 <ChevronRight className="w-3.5 h-3.5" />
               </Link>
 
-              {/* Internal Admin Console Link for Admin / Staff */}
+              {/* Private Admin Portal Link (Only for authorized Staff/Admin) */}
               {(isAdmin || isStaff) && (
                 <Link
                   href="/admin"
@@ -572,36 +488,199 @@ export function AccountClient({ initialUser, initialOrders }: AccountClientProps
           {/* Profile Card */}
           <div className="rounded-2xl border border-border/80 bg-card p-6 space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="font-heading font-bold text-base text-foreground">
-                Account Credentials & Profile
-              </h2>
-              <span className="text-xs text-muted-foreground">Emirate: {user.emirate}, UAE</span>
+              <div>
+                <h2 className="font-heading font-bold text-base text-foreground">
+                  Account Credentials & Profile
+                </h2>
+                <p className="text-xs text-muted-foreground">
+                  Stored securely in the Supabase database
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsEditing(!isEditing)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border/80 hover:border-cyan-500/40 text-xs font-semibold text-foreground hover:text-cyan-400 transition-all cursor-pointer"
+              >
+                {isEditing ? (
+                  <>
+                    <X className="w-3.5 h-3.5" />
+                    <span>Cancel</span>
+                  </>
+                ) : (
+                  <>
+                    <Edit3 className="w-3.5 h-3.5" />
+                    <span>Edit Profile & Phone</span>
+                  </>
+                )}
+              </button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-              <div className="p-3.5 rounded-xl bg-muted/20 border border-border/50">
-                <span className="text-muted-foreground block text-[11px]">Full Name</span>
-                <span className="font-semibold text-foreground text-sm">{user.name}</span>
-              </div>
+            {/* Profile Editing Form */}
+            {isEditing ? (
+              <form onSubmit={handleSaveProfile} className="space-y-4 pt-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                  <div>
+                    <label className="font-medium text-foreground block mb-1">
+                      Full Legal Name *
+                    </label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <input
+                        type="text"
+                        required
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        className="w-full pl-9 pr-3 py-2 rounded-xl bg-muted/40 border border-border/80 text-xs focus:outline-none focus:border-cyan-500"
+                      />
+                    </div>
+                  </div>
 
-              <div className="p-3.5 rounded-xl bg-muted/20 border border-border/50">
-                <span className="text-muted-foreground block text-[11px]">Email Address</span>
-                <span className="font-semibold text-foreground font-mono">{user.email}</span>
-              </div>
+                  <div>
+                    <label className="font-medium text-foreground block mb-1">
+                      Mobile Phone Number *
+                    </label>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <input
+                        type="tel"
+                        required
+                        placeholder="+971 50 123 4567"
+                        value={editPhone}
+                        onChange={(e) => setEditPhone(e.target.value)}
+                        className="w-full pl-9 pr-3 py-2 rounded-xl bg-muted/40 border border-border/80 text-xs focus:outline-none focus:border-cyan-500"
+                      />
+                    </div>
+                  </div>
 
-              <div className="p-3.5 rounded-xl bg-muted/20 border border-border/50">
-                <span className="text-muted-foreground block text-[11px]">Mobile Phone</span>
-                <span className="font-semibold text-foreground">{user.phone}</span>
-              </div>
+                  <div>
+                    <label className="font-medium text-foreground block mb-1">
+                      Primary UAE Emirate *
+                    </label>
+                    <div className="relative">
+                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <select
+                        value={editEmirate}
+                        onChange={(e) => setEditEmirate(e.target.value)}
+                        className="w-full pl-9 pr-3 py-2 rounded-xl bg-muted/40 border border-border/80 text-xs focus:outline-none focus:border-cyan-500 cursor-pointer"
+                      >
+                        <option value="Dubai">Dubai</option>
+                        <option value="Abu Dhabi">Abu Dhabi</option>
+                        <option value="Sharjah">Sharjah</option>
+                        <option value="Ajman">Ajman</option>
+                        <option value="Ras Al Khaimah">Ras Al Khaimah</option>
+                        <option value="Umm Al Quwain">Umm Al Quwain</option>
+                        <option value="Fujairah">Fujairah</option>
+                      </select>
+                    </div>
+                  </div>
 
-              <div className="p-3.5 rounded-xl bg-muted/20 border border-border/50">
-                <span className="text-muted-foreground block text-[11px]">Assigned Role</span>
-                <span className="font-bold text-cyan-400 capitalize">{user.role} Account</span>
+                  <div>
+                    <label className="font-medium text-foreground block mb-1">
+                      New Password (leave empty to keep current)
+                    </label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <input
+                        type="password"
+                        placeholder="••••••••••••"
+                        value={editNewPassword}
+                        onChange={(e) => setEditNewPassword(e.target.value)}
+                        className="w-full pl-9 pr-3 py-2 rounded-xl bg-muted/40 border border-border/80 text-xs focus:outline-none focus:border-cyan-500 font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="font-medium text-foreground block mb-1">
+                      Company Name (B2B Accounts)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Al-Hashimi Ventures LLC"
+                      value={editCompanyName}
+                      onChange={(e) => setEditCompanyName(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-muted/40 border border-border/80 text-xs focus:outline-none focus:border-cyan-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-medium text-foreground block mb-1">
+                      FTA Tax Registration Number (TRN)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="100XXXXXXXXXXXX"
+                      value={editTrn}
+                      onChange={(e) => setEditTrn(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-muted/40 border border-border/80 text-xs focus:outline-none focus:border-cyan-500 font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 pt-2">
+                  <button
+                    type="submit"
+                    disabled={updating}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 text-white font-bold text-xs shadow-md shadow-cyan-500/20 hover:opacity-95 transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    {updating ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Updating Database...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-3.5 h-3.5" />
+                        <span>Save Changes to Database</span>
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsEditing(false)}
+                    className="px-4 py-2.5 rounded-xl border border-border/80 text-xs text-muted-foreground hover:text-foreground transition-all cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            ) : (
+              /* Display View */
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                <div className="p-3.5 rounded-xl bg-muted/20 border border-border/50">
+                  <span className="text-muted-foreground block text-[11px]">Full Name</span>
+                  <span className="font-semibold text-foreground text-sm">{user.name}</span>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-muted/20 border border-border/50">
+                  <span className="text-muted-foreground block text-[11px]">Email Address</span>
+                  <span className="font-semibold text-foreground font-mono">{user.email}</span>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-muted/20 border border-border/50">
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground block text-[11px]">Mobile Phone</span>
+                    {user.isPhoneVerified && (
+                      <span className="text-[10px] text-emerald-400 font-bold flex items-center gap-1 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                        <ShieldCheck className="w-3 h-3" />
+                        <span>Verified Real User</span>
+                      </span>
+                    )}
+                  </div>
+                  <span className="font-semibold text-foreground font-mono">{user.phone}</span>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-muted/20 border border-border/50">
+                  <span className="text-muted-foreground block text-[11px]">Primary Emirate</span>
+                  <span className="font-semibold text-foreground">{user.emirate || "Dubai"}, UAE</span>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Corporate / B2B Details */}
-            {user.companyName && (
+            {user.companyName && !isEditing && (
               <div className="pt-4 border-t border-border/40">
                 <div className="flex items-center gap-2 text-xs font-semibold text-foreground mb-3">
                   <Building2 className="w-4 h-4 text-cyan-400" />
@@ -630,10 +709,10 @@ export function AccountClient({ initialUser, initialOrders }: AccountClientProps
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="font-heading font-bold text-base text-foreground">
-                  Recent Orders
+                  Your Orders & Tax Invoices
                 </h2>
                 <p className="text-xs text-muted-foreground">
-                  Live orders recorded in the MKN Dubai server database
+                  Real-time orders for {user.email}
                 </p>
               </div>
               <Link
@@ -694,8 +773,8 @@ export function AccountClient({ initialUser, initialOrders }: AccountClientProps
                   </p>
                 </div>
                 <Link
-                  href="/products"
-                  className="inline-block px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-opacity"
+                  href="/catalogue"
+                  className="inline-block px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 text-white text-xs font-semibold hover:opacity-95 transition-opacity"
                 >
                   Browse Catalogue →
                 </Link>
