@@ -43,9 +43,34 @@ export function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const [isScrolled, setIsScrolled] = React.useState(false);
   const [currentUser, setCurrentUser] = React.useState<AuthUser | null>(null);
+  const [wishlistCount, setWishlistCount] = React.useState(0);
 
   React.useEffect(() => {
     getCurrentUserAction().then(setCurrentUser).catch(() => {});
+  }, []);
+
+  React.useEffect(() => {
+    const updateWishlistCount = () => {
+      try {
+        const stored = localStorage.getItem("mkn_wishlist_items");
+        if (stored) {
+          const items = JSON.parse(stored);
+          setWishlistCount(Array.isArray(items) ? items.length : 0);
+        } else {
+          setWishlistCount(0);
+        }
+      } catch {
+        setWishlistCount(0);
+      }
+    };
+
+    updateWishlistCount();
+    window.addEventListener("wishlist-updated", updateWishlistCount);
+    window.addEventListener("storage", updateWishlistCount);
+    return () => {
+      window.removeEventListener("wishlist-updated", updateWishlistCount);
+      window.removeEventListener("storage", updateWishlistCount);
+    };
   }, []);
 
   React.useEffect(() => {
@@ -167,10 +192,15 @@ export function Navbar() {
 
               <Link
                 href="/account/wishlist"
-                className="hidden sm:flex w-9 h-9 rounded-full items-center justify-center border border-border/60 hover:border-border hover:bg-accent/40 text-muted-foreground hover:text-foreground transition-all"
+                className="relative hidden sm:flex w-9 h-9 rounded-full items-center justify-center border border-border/60 hover:border-border hover:bg-accent/40 text-muted-foreground hover:text-foreground transition-all"
                 aria-label="Wishlist"
               >
                 <Heart className="w-4 h-4" />
+                {wishlistCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center shadow-sm">
+                    {wishlistCount}
+                  </span>
+                )}
               </Link>
 
               <Link
@@ -252,7 +282,7 @@ export function Navbar() {
               })}
             </div>
 
-            <div className="pt-3 border-t border-border/40 grid grid-cols-2 gap-2 text-xs">
+            <div className="pt-3 border-t border-border/40 grid grid-cols-3 gap-2 text-xs">
               <Link
                 href="/account"
                 onClick={() => setMobileMenuOpen(false)}
@@ -265,7 +295,19 @@ export function Navbar() {
                 onClick={() => setMobileMenuOpen(false)}
                 className="p-2.5 rounded-lg border border-border/60 text-center font-medium hover:bg-accent/30"
               >
-                Track Orders
+                Orders
+              </Link>
+              <Link
+                href="/account/wishlist"
+                onClick={() => setMobileMenuOpen(false)}
+                className="p-2.5 rounded-lg border border-border/60 text-center font-medium hover:bg-accent/30 flex items-center justify-center gap-1"
+              >
+                <span>Wishlist</span>
+                {wishlistCount > 0 && (
+                  <span className="w-4 h-4 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center">
+                    {wishlistCount}
+                  </span>
+                )}
               </Link>
             </div>
           </div>

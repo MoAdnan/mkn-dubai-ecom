@@ -71,6 +71,47 @@ export function ProductDetailView({
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  // Sync wishlist status with localStorage
+  React.useEffect(() => {
+    try {
+      const stored = localStorage.getItem("mkn_wishlist_items");
+      if (stored) {
+        const items = JSON.parse(stored);
+        if (Array.isArray(items)) {
+          setIsWishlisted(items.some((item: any) => item.id === product.id));
+        }
+      }
+    } catch {}
+  }, [product.id]);
+
+  const handleToggleWishlist = () => {
+    try {
+      const stored = localStorage.getItem("mkn_wishlist_items");
+      let items: any[] = stored ? JSON.parse(stored) : [];
+      if (!Array.isArray(items)) items = [];
+
+      if (isWishlisted) {
+        items = items.filter((item) => item.id !== product.id);
+        setIsWishlisted(false);
+      } else {
+        items.push({
+          id: product.id,
+          title: product.title,
+          brand_name: product.brand_name,
+          slug: product.slug,
+          priceFils: activePriceFils,
+          image: product.images[0]?.url || "",
+          stock_quantity: effectiveStock,
+        });
+        setIsWishlisted(true);
+      }
+      localStorage.setItem("mkn_wishlist_items", JSON.stringify(items));
+      window.dispatchEvent(new Event("wishlist-updated"));
+    } catch (e) {
+      console.error("Wishlist error:", e);
+    }
+  };
+
   const handleAddToCart = () => {
     addItem(
       {
@@ -406,13 +447,14 @@ export function ProductDetailView({
 
               <button
                 type="button"
-                onClick={() => setIsWishlisted(!isWishlisted)}
-                className={`p-3.5 rounded-2xl border transition-colors ${
+                onClick={handleToggleWishlist}
+                className={`p-3.5 rounded-2xl border transition-colors cursor-pointer ${
                   isWishlisted
                     ? "border-rose-500 text-rose-500 bg-rose-500/10"
                     : "border-border/80 bg-card hover:bg-muted text-muted-foreground"
                 }`}
                 aria-label="Add to wishlist"
+                title={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
               >
                 <Heart className={`w-5 h-5 ${isWishlisted ? "fill-rose-500" : ""}`} />
               </button>
