@@ -23,6 +23,8 @@ import {
 import { useCart } from "@/components/cart-provider";
 import { formatAED, aedToFils } from "@/lib/utils";
 import { processCheckoutAction } from "@/app/actions/checkout";
+import { getCurrentUserAction } from "@/app/actions/auth";
+import { getUserAddressesAction } from "@/app/actions/addresses";
 
 const UAE_EMIRATES = [
   "Dubai",
@@ -41,15 +43,15 @@ function CheckoutForm() {
 
   const prefilledCoupon = searchParams.get("coupon") || "";
 
-  // Form State
-  const [fullName, setFullName] = React.useState("Adnan Al-Hashimi");
-  const [email, setEmail] = React.useState("adnan@example.ae");
-  const [phone, setPhone] = React.useState("+971 50 123 4567");
+  // Form State - Initialized empty without fake prefilled data
+  const [fullName, setFullName] = React.useState("");
+  const [email, setEmail] = React.useState("");
+  const [phone, setPhone] = React.useState("");
   const [emirate, setEmirate] = React.useState<typeof UAE_EMIRATES[number]>("Dubai");
-  const [area, setArea] = React.useState("Downtown Dubai");
-  const [streetAddress, setStreetAddress] = React.useState("Sheikh Mohammed bin Rashid Blvd");
-  const [buildingName, setBuildingName] = React.useState("Burj Crown Tower");
-  const [apartmentNumber, setApartmentNumber] = React.useState("Suite 1402");
+  const [area, setArea] = React.useState("");
+  const [streetAddress, setStreetAddress] = React.useState("");
+  const [buildingName, setBuildingName] = React.useState("");
+  const [apartmentNumber, setApartmentNumber] = React.useState("");
   const [isB2B, setIsB2B] = React.useState(false);
   const [companyName, setCompanyName] = React.useState("");
   const [customerTRN, setCustomerTRN] = React.useState("");
@@ -58,10 +60,50 @@ function CheckoutForm() {
   const [couponCode, setCouponCode] = React.useState(prefilledCoupon);
 
   // Card Payment Details State
-  const [cardNumber, setCardNumber] = React.useState("4242 4242 4242 4242");
-  const [cardHolder, setCardHolder] = React.useState("Adnan Al-Hashimi");
-  const [expiryDate, setExpiryDate] = React.useState("12/28");
-  const [cvv, setCvv] = React.useState("123");
+  const [cardNumber, setCardNumber] = React.useState("");
+  const [cardHolder, setCardHolder] = React.useState("");
+  const [expiryDate, setExpiryDate] = React.useState("");
+  const [cvv, setCvv] = React.useState("");
+
+  // Sync with real authenticated user and their saved Supabase address
+  React.useEffect(() => {
+    Promise.all([getCurrentUserAction(), getUserAddressesAction()])
+      .then(([user, addresses]) => {
+        if (user) {
+          setFullName((prev) => prev || user.name || "");
+          setEmail((prev) => prev || user.email || "");
+          if (user.phone && !user.phone.includes("0000")) {
+            setPhone((prev) => prev || user.phone);
+          }
+          if (user.companyName) {
+            setIsB2B(true);
+            setCompanyName((prev) => prev || user.companyName || "");
+          }
+          if (user.trn) {
+            setCustomerTRN((prev) => prev || user.trn || "");
+          }
+          setCardHolder((prev) => prev || user.name || "");
+        }
+
+        if (addresses && addresses.length > 0) {
+          const defaultAddr = addresses.find((a) => a.isDefault) || addresses[0];
+          if (defaultAddr) {
+            if (defaultAddr.emirate && (UAE_EMIRATES as readonly string[]).includes(defaultAddr.emirate)) {
+              setEmirate(defaultAddr.emirate as any);
+            }
+            if (defaultAddr.area) setArea((prev) => prev || defaultAddr.area);
+            if (defaultAddr.streetAddress) setStreetAddress((prev) => prev || defaultAddr.streetAddress);
+            if (defaultAddr.buildingName) setBuildingName((prev) => prev || defaultAddr.buildingName || "");
+            if (defaultAddr.apartmentNumber) setApartmentNumber((prev) => prev || defaultAddr.apartmentNumber || "");
+            if (defaultAddr.recipientName) setFullName((prev) => prev || defaultAddr.recipientName);
+            if (defaultAddr.phone && !defaultAddr.phone.includes("0000")) {
+              setPhone((prev) => prev || defaultAddr.phone);
+            }
+          }
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -117,7 +159,7 @@ function CheckoutForm() {
 
   const fillTestCard = () => {
     setCardNumber("4242 4242 4242 4242");
-    setCardHolder(fullName || "Adnan Al-Hashimi");
+    setCardHolder(fullName || "MKN Customer");
     setExpiryDate("12/28");
     setCvv("123");
   };
@@ -138,6 +180,43 @@ function CheckoutForm() {
     try {
       if (items.length === 0) {
         throw new Error("Your cart is empty. Please add items before checking out.");
+      }
+
+      if (!fullName.trim() || fullName.trim().length < 2) {
+        throw new Error("Full Legal Name is required for UAE delivery.");
+      }
+      if (!email.trim() || !email.includes("@")) {
+        throw new Error("A valid Email Address is required to receive your FTA Tax Invoice.");
+      }
+      if (!phone.trim() || phone.trim().length < 7 || phone.includes("0000")) {
+        throw new Error("A valid UAE Mobile Phone Number is required for courier dispatch.");
+      }
+      if (!area.trim()) {
+        throw new Error("Area / District is required for delivery.");
+      }
+      if (!streetAddress.trim()) {
+        throw new Error("Street Address is required for delivery.");
+      }
+      if (!buildingName.trim()) {
+        throw new Error("Building or Villa Name is required for courier delivery.");
+      }
+      if (!apartmentNumber.trim()) {
+        throw new Error("Apartment / Villa / Suite Number is required for delivery.");
+      }
+
+      if (paymentMethod === "card_stripe") {
+        if (!cardNumber.trim() || cardNumber.replace(/\s+/g, "").length < 15) {
+          throw new Error("Please enter a valid 16-digit card number.");
+        }
+        if (!cardHolder.trim()) {
+          throw new Error("Cardholder Name is required.");
+        }
+        if (!expiryDate.trim() || !expiryDate.includes("/")) {
+          throw new Error("Card expiry date (MM/YY) is required.");
+        }
+        if (!cvv.trim() || cvv.length < 3) {
+          throw new Error("Card CVV security code is required.");
+        }
       }
 
       // Check COD limit (standard Dubai courier threshold is AED 5,000)
@@ -423,11 +502,12 @@ function CheckoutForm() {
 
                 <div>
                   <label className="font-medium text-foreground block mb-1">
-                    Building / Tower Name
+                    Building / Tower Name *
                   </label>
                   <input
                     type="text"
-                    placeholder="e.g. Burj Crown Tower"
+                    required
+                    placeholder="e.g. Burj Crown Tower / Villa 12"
                     value={buildingName}
                     onChange={(e) => setBuildingName(e.target.value)}
                     className="w-full p-2.5 rounded-xl bg-muted/40 border border-border/80 focus:outline-none focus:border-cyan-500"
@@ -436,11 +516,12 @@ function CheckoutForm() {
 
                 <div>
                   <label className="font-medium text-foreground block mb-1">
-                    Apartment / Villa Number
+                    Apartment / Villa Number *
                   </label>
                   <input
                     type="text"
-                    placeholder="e.g. Apt 1402"
+                    required
+                    placeholder="e.g. Apt 1402 / Unit 4B"
                     value={apartmentNumber}
                     onChange={(e) => setApartmentNumber(e.target.value)}
                     className="w-full p-2.5 rounded-xl bg-muted/40 border border-border/80 focus:outline-none focus:border-cyan-500"

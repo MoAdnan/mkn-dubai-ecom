@@ -110,6 +110,16 @@ export function AccountClient({ initialUser, initialOrders }: AccountClientProps
     e.preventDefault();
     setUpdateError(null);
     setUpdateSuccess(false);
+
+    if (!editName.trim() || editName.trim().length < 2) {
+      setUpdateError("Full legal name is required (minimum 2 characters).");
+      return;
+    }
+    if (!editPhone.trim() || editPhone.trim().length < 7 || editPhone.includes("0000")) {
+      setUpdateError("A valid UAE mobile phone number is required (e.g. +971 50 123 4567). Couriers cannot dispatch orders without a working phone.");
+      return;
+    }
+
     setUpdating(true);
 
     try {
@@ -304,6 +314,28 @@ export function AccountClient({ initialUser, initialOrders }: AccountClientProps
         <div className="mb-6 p-4 rounded-2xl bg-destructive/10 border border-destructive/30 text-destructive text-xs flex items-center gap-3">
           <ShieldAlert className="w-5 h-5 flex-shrink-0" />
           <span>{updateError}</span>
+        </div>
+      )}
+
+      {/* Missing Phone Alert (Important for Order Delivery) */}
+      {(!user.phone || user.phone.includes("0000") || user.phone.trim().length < 7) && (
+        <div className="mb-6 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <ShieldAlert className="w-5 h-5 flex-shrink-0" />
+            <div>
+              <span className="font-bold block">Mobile Phone Required for Deliveries</span>
+              <span className="text-muted-foreground text-[11px]">
+                Please add your real UAE mobile phone number so courier drivers can call you to complete delivery.
+              </span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsEditing(true)}
+            className="px-3.5 py-1.5 rounded-xl bg-amber-500 text-black font-bold text-xs hover:bg-amber-400 transition-colors flex-shrink-0 cursor-pointer w-fit"
+          >
+            Add Mobile Phone
+          </button>
         </div>
       )}
 
@@ -590,7 +622,13 @@ export function AccountClient({ initialUser, initialOrders }: AccountClientProps
                       </span>
                     )}
                   </div>
-                  <span className="font-semibold text-foreground font-mono">{user.phone}</span>
+                  {user.phone && !user.phone.includes("0000") && user.phone.trim().length >= 7 ? (
+                    <span className="font-semibold text-foreground font-mono">{user.phone}</span>
+                  ) : (
+                    <span className="text-amber-400 font-medium text-xs flex items-center gap-1 mt-0.5">
+                      <span>⚠️ Not Provided (Required for Orders)</span>
+                    </span>
+                  )}
                 </div>
 
                 <div className="p-3.5 rounded-xl bg-muted/20 border border-border/50">
@@ -617,7 +655,7 @@ export function AccountClient({ initialUser, initialOrders }: AccountClientProps
                       Federal Tax Authority TRN
                     </span>
                     <span className="font-mono font-bold text-cyan-400">
-                      {user.trn || "100482918200003"}
+                      {user.trn || "Not Registered"}
                     </span>
                   </div>
                 </div>
