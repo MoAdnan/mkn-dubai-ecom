@@ -2,6 +2,38 @@
   "products": [],
   "orders": [
     {
+      "id": "ord-62293",
+      "orderNumber": "MKN-2026-62293",
+      "invoiceNumber": "INV-2026-62293",
+      "customer": "Musthafa",
+      "email": "musthafa@gmail.com",
+      "phone": "+971561036858",
+      "emirate": "Ras Al Khaimah",
+      "address": "MKN Registered Delivery Address, Downtown, dgh, fgh",
+      "items": [
+        {
+          "title": "MKN Dubai Flagship Testing Device",
+          "sku": "MKN-REAL-001",
+          "quantity": 1,
+          "priceFils": 129900
+        }
+      ],
+      "itemsSummary": "MKN Dubai Flagship Testing Device (x1)",
+      "subtotalFils": 129900,
+      "vatFils": 6186,
+      "shippingFils": 3500,
+      "discountFils": 0,
+      "totalFils": 133400,
+      "paymentMethod": "cod",
+      "paymentStatus": "pending",
+      "orderStatus": "shipped",
+      "trackingNumber": "RAS-EXP-62293",
+      "courierName": "Dubai Same-Day Express",
+      "date": "26 Nov 2026",
+      "createdAt": "2026-11-26T15:30:43.383Z",
+      "isB2B": false
+    },
+    {
       "id": "ord-78338",
       "orderNumber": "MKN-2026-78338",
       "invoiceNumber": "INV-2026-78338",
@@ -483,6 +515,22 @@
     }
   ],
   "invoices": [
+    {
+      "id": "inv-1795707043389",
+      "invoiceNumber": "INV-2026-62293",
+      "orderNumber": "MKN-2026-62293",
+      "invoiceType": "simplified",
+      "issueDate": "26 Nov 2026",
+      "customer": "Musthafa",
+      "email": "musthafa@gmail.com",
+      "phone": "+971561036858",
+      "address": "MKN Registered Delivery Address, Downtown, dgh, fgh",
+      "emirate": "Ras Al Khaimah",
+      "subtotalFils": 129900,
+      "vatFils": 6186,
+      "totalFils": 133400,
+      "createdAt": "2026-11-26T15:30:43.389Z"
+    },
     {
       "id": "inv-1795684228471",
       "invoiceNumber": "INV-2026-78338",

@@ -98,8 +98,15 @@ export function Footer() {
                 <span>Showroom & Warehouse: Al Quoz Industrial Area 1, Dubai, UAE</span>
               </p>
               <p className="flex items-center gap-2">
-                <Phone className="w-3.5 h-3.5 text-violet-400" />
-                <span>Customer Care: +971 4 398 2211 (Sat - Thu, 9 AM - 8 PM GST)</span>
+                <Phone className="w-3.5 h-3.5 text-emerald-400" />
+                <a
+                  href="https://wa.me/971561036858"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-emerald-400 transition-colors"
+                >
+                  Phone & WhatsApp: +971 56 103 6858 (Sat - Thu, 9 AM - 8 PM GST)
+                </a>
               </p>
               <p className="flex items-center gap-2">
                 <Mail className="w-3.5 h-3.5 text-emerald-400" />
