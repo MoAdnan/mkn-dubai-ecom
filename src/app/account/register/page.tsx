@@ -29,7 +29,7 @@ type RegisterMode = "phone_otp" | "email";
 
 export default function RegisterPage() {
   const router = useRouter();
-  const [mode, setMode] = React.useState<RegisterMode>("phone_otp");
+  const [mode, setMode] = React.useState<RegisterMode>("email");
 
   // Common Fields
   const [fullName, setFullName] = React.useState("");
@@ -183,28 +183,12 @@ export default function RegisterPage() {
             Create MKN Dubai Account
           </h1>
           <p className="text-xs text-muted-foreground">
-            Real user verification via UAE SMS OTP, order tracking, and official FTA invoices
+            Register with your email and password for real-time order tracking and official FTA tax invoices.
           </p>
         </div>
 
         {/* Registration Method Switcher */}
         <div className="grid grid-cols-2 gap-1.5 p-1 rounded-2xl bg-muted/50 border border-border/70 text-xs font-semibold">
-          <button
-            type="button"
-            onClick={() => {
-              setMode("phone_otp");
-              setError(null);
-            }}
-            className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl transition-all cursor-pointer ${
-              mode === "phone_otp"
-                ? "bg-card text-cyan-400 shadow-sm border border-cyan-500/30 font-bold"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <Smartphone className="w-3.5 h-3.5" />
-            <span>Mobile Phone OTP</span>
-          </button>
-
           <button
             type="button"
             onClick={() => {
@@ -219,6 +203,22 @@ export default function RegisterPage() {
           >
             <Mail className="w-3.5 h-3.5" />
             <span>Email & Password</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setMode("phone_otp");
+              setError(null);
+            }}
+            className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl transition-all cursor-pointer ${
+              mode === "phone_otp"
+                ? "bg-card text-cyan-400 shadow-sm border border-cyan-500/30 font-bold"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Smartphone className="w-3.5 h-3.5" />
+            <span>Mobile Phone OTP</span>
           </button>
         </div>
 

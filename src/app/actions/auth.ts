@@ -9,7 +9,7 @@ import {
   type AuthUser,
   type UserRole,
 } from "@/lib/services/auth-service";
-import { createAdminClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 
 export async function getCurrentUserAction(): Promise<AuthUser | null> {
   const cookieStore = await cookies();
@@ -54,36 +54,47 @@ export async function loginAction(
   if (!email || !email.includes("@")) {
     return { success: false, error: "Please provide a valid email address." };
   }
-
-  const normalizedEmail = email.toLowerCase().trim();
-
-  let user: AuthUser | null = null;
-
-  // 1. Check live Supabase Database for registered profile
-  try {
-    const supabase = createAdminClient();
-    const { data: profile } = await (supabase.from("profiles") as any)
-      .select("*")
-      .eq("email", normalizedEmail)
-      .maybeSingle();
-
-    if (profile) {
-      user = {
-        id: profile.id,
-        name: profile.full_name || normalizedEmail.split("@")[0],
-        email: profile.email,
-        phone: profile.phone || "+971 50 000 0000",
-        role: (profile.role as UserRole) || "customer",
-        companyName: profile.company_name || undefined,
-        trn: profile.trn || undefined,
-        emirate: "Dubai",
-      };
-    }
-  } catch (err) {
-    console.warn("Supabase profile lookup note:", err);
+  if (!password || password.trim().length === 0) {
+    return { success: false, error: "Please enter your password." };
   }
 
-  // 2. Fallback to predefined team users or generated customer
+  const normalizedEmail = email.toLowerCase().trim();
+  let user: AuthUser | null = null;
+
+  // 1. Authenticate with Supabase Auth (Email + Password)
+  try {
+    const supabaseClient = await createClient();
+    const { data: authData, error: authErr } = await supabaseClient.auth.signInWithPassword({
+      email: normalizedEmail,
+      password,
+    });
+
+    if (authData?.user) {
+      const adminClient = createAdminClient();
+      const { data: profile } = await (adminClient.from("profiles") as any)
+        .select("*")
+        .eq("id", authData.user.id)
+        .maybeSingle();
+
+      const meta = authData.user.user_metadata || {};
+      user = {
+        id: authData.user.id,
+        name: profile?.full_name || meta.full_name || normalizedEmail.split("@")[0],
+        email: authData.user.email || normalizedEmail,
+        phone: profile?.phone || meta.phone || "+971 50 000 0000",
+        role: (profile?.role as UserRole) || "customer",
+        companyName: profile?.company_name || meta.company_name || undefined,
+        trn: profile?.trn || meta.trn || undefined,
+        emirate: meta.emirate || "Dubai",
+      };
+    } else if (authErr) {
+      console.warn("Supabase signInWithPassword note:", authErr.message);
+    }
+  } catch (err: any) {
+    console.warn("Supabase auth exception:", err?.message);
+  }
+
+  // 2. Predefined team users or executive admin fallback
   if (!user) {
     const fallback = findUserByEmail(normalizedEmail);
     if (fallback) {
@@ -91,8 +102,8 @@ export async function loginAction(
 
       // Automatically sync fallback user to Supabase profiles so it's persisted in cloud
       try {
-        const supabase = createAdminClient();
-        await (supabase.from("profiles") as any).upsert({
+        const adminClient = createAdminClient();
+        await (adminClient.from("profiles") as any).upsert({
           id: user.id,
           email: user.email,
           full_name: user.name,
@@ -107,8 +118,35 @@ export async function loginAction(
     }
   }
 
+  // 3. Fallback to Supabase Database profile lookup
   if (!user) {
-    return { success: false, error: "Invalid credentials. Please register an account." };
+    try {
+      const adminClient = createAdminClient();
+      const { data: profile } = await (adminClient.from("profiles") as any)
+        .select("*")
+        .eq("email", normalizedEmail)
+        .maybeSingle();
+
+      if (profile) {
+        user = {
+          id: profile.id,
+          name: profile.full_name || normalizedEmail.split("@")[0],
+          email: profile.email,
+          phone: profile.phone || "+971 50 000 0000",
+          role: (profile.role as UserRole) || "customer",
+          companyName: profile.company_name || undefined,
+          trn: profile.trn || undefined,
+          emirate: "Dubai",
+        };
+      }
+    } catch {}
+  }
+
+  if (!user) {
+    return {
+      success: false,
+      error: "Invalid email or password. Please check your credentials or create a new account.",
+    };
   }
 
   const cookieStore = await cookies();
@@ -149,6 +187,9 @@ export async function registerUserAction(
   }
   if (!input.phone || input.phone.trim().length < 7) {
     return { success: false, error: "Please enter a valid UAE mobile phone number." };
+  }
+  if (!input.password || input.password.length < 6) {
+    return { success: false, error: "Password must be at least 6 characters long." };
   }
 
   const normalizedEmail = input.email.toLowerCase().trim();

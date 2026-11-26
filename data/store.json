@@ -2,6 +2,74 @@
   "products": [],
   "orders": [
     {
+      "id": "ord-78338",
+      "orderNumber": "MKN-2026-78338",
+      "invoiceNumber": "INV-2026-78338",
+      "customer": "Adnan Al-Hashimi",
+      "email": "adnan@example.ae",
+      "phone": "+971 50 123 4567",
+      "emirate": "Dubai",
+      "address": "Sheikh Mohammed bin Rashid Blvd, Downtown Dubai, Burj Crown Tower, Suite 1402",
+      "items": [
+        {
+          "title": "MKN Dubai Flagship Testing Device",
+          "sku": "MKN-REAL-001",
+          "quantity": 4,
+          "priceFils": 129900
+        }
+      ],
+      "itemsSummary": "MKN Dubai Flagship Testing Device (x4)",
+      "subtotalFils": 519600,
+      "vatFils": 24743,
+      "shippingFils": 3500,
+      "discountFils": 0,
+      "totalFils": 523100,
+      "paymentMethod": "card_stripe",
+      "paymentStatus": "paid",
+      "cardLast4": "4242",
+      "cardBrand": "Visa",
+      "orderStatus": "processing",
+      "trackingNumber": "DUB-EXP-78338",
+      "courierName": "Dubai Same-Day Express",
+      "date": "26 Nov 2026",
+      "createdAt": "2026-11-26T09:10:28.469Z",
+      "isB2B": false
+    },
+    {
+      "id": "ord-71608",
+      "orderNumber": "MKN-2026-71608",
+      "invoiceNumber": "INV-2026-71608",
+      "customer": "Adnan Al-Hashimi",
+      "email": "adnan@example.ae",
+      "phone": "+971 50 123 4567",
+      "emirate": "Dubai",
+      "address": "Sheikh Mohammed bin Rashid Blvd, Downtown Dubai, Burj Crown Tower, Suite 1402",
+      "items": [
+        {
+          "title": "MKN Dubai Flagship Testing Device",
+          "sku": "MKN-REAL-001",
+          "quantity": 1,
+          "priceFils": 129900
+        }
+      ],
+      "itemsSummary": "MKN Dubai Flagship Testing Device (x1)",
+      "subtotalFils": 129900,
+      "vatFils": 6186,
+      "shippingFils": 3500,
+      "discountFils": 0,
+      "totalFils": 133400,
+      "paymentMethod": "card_stripe",
+      "paymentStatus": "paid",
+      "cardLast4": "4242",
+      "cardBrand": "Visa",
+      "orderStatus": "processing",
+      "trackingNumber": "DUB-EXP-71608",
+      "courierName": "Dubai Same-Day Express",
+      "date": "26 Nov 2026",
+      "createdAt": "2026-11-26T09:09:49.507Z",
+      "isB2B": false
+    },
+    {
       "id": "ord-68873",
       "orderNumber": "MKN-2026-68873",
       "invoiceNumber": "INV-2026-68873",
@@ -415,6 +483,38 @@
     }
   ],
   "invoices": [
+    {
+      "id": "inv-1795684228471",
+      "invoiceNumber": "INV-2026-78338",
+      "orderNumber": "MKN-2026-78338",
+      "invoiceType": "simplified",
+      "issueDate": "26 Nov 2026",
+      "customer": "Adnan Al-Hashimi",
+      "email": "adnan@example.ae",
+      "phone": "+971 50 123 4567",
+      "address": "Sheikh Mohammed bin Rashid Blvd, Downtown Dubai, Burj Crown Tower, Suite 1402",
+      "emirate": "Dubai",
+      "subtotalFils": 519600,
+      "vatFils": 24743,
+      "totalFils": 523100,
+      "createdAt": "2026-11-26T09:10:28.471Z"
+    },
+    {
+      "id": "inv-1795684189516",
+      "invoiceNumber": "INV-2026-71608",
+      "orderNumber": "MKN-2026-71608",
+      "invoiceType": "simplified",
+      "issueDate": "26 Nov 2026",
+      "customer": "Adnan Al-Hashimi",
+      "email": "adnan@example.ae",
+      "phone": "+971 50 123 4567",
+      "address": "Sheikh Mohammed bin Rashid Blvd, Downtown Dubai, Burj Crown Tower, Suite 1402",
+      "emirate": "Dubai",
+      "subtotalFils": 129900,
+      "vatFils": 6186,
+      "totalFils": 133400,
+      "createdAt": "2026-11-26T09:09:49.516Z"
+    },
     {
       "id": "inv-1795427669065",
       "invoiceNumber": "INV-2026-68873",
