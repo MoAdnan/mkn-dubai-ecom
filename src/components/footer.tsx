@@ -16,6 +16,12 @@ import {
 } from "lucide-react";
 
 export function Footer() {
+  const [currentYear, setCurrentYear] = React.useState<number>(2026);
+
+  React.useEffect(() => {
+    setCurrentYear(new Date().getFullYear());
+  }, []);
+
   return (
     <footer className="bg-card/70 border-t border-border/70 backdrop-blur-md text-muted-foreground mt-auto">
       {/* UAE Trust Highlights Bar */}
@@ -239,7 +245,7 @@ export function Footer() {
 
         {/* Bottom copyright */}
         <div className="mt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-muted-foreground/80 gap-4">
-          <p>© {new Date().getFullYear()} MKN Electronics L.L.C. All rights reserved. Made in Dubai, UAE.</p>
+          <p suppressHydrationWarning>© {currentYear} MKN Electronics L.L.C. All rights reserved. Made in Dubai, UAE.</p>
           <p className="flex items-center gap-1">
             <span>Official Distributor for UAE & GCC</span>
           </p>
