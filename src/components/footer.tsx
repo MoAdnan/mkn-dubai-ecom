@@ -239,7 +239,7 @@ export function Footer() {
 
         {/* Bottom copyright */}
         <div className="mt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-muted-foreground/80 gap-4">
-          <p>© 2026 MKN Electronics L.L.C. All rights reserved. Made in Dubai, UAE.</p>
+          <p>© {new Date().getFullYear()} MKN Electronics L.L.C. All rights reserved. Made in Dubai, UAE.</p>
           <p className="flex items-center gap-1">
             <span>Official Distributor for UAE & GCC</span>
           </p>
