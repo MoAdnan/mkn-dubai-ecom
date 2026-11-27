@@ -14,9 +14,20 @@ import { aedToFils } from "@/lib/utils";
 import { createAdminClient } from "@/lib/supabase/server";
 
 const CheckoutSchema = z.object({
-  fullName: z.string().min(2, "Full name is required"),
-  email: z.string().email("Valid email is required"),
-  phone: z.string().min(7, "Valid phone number is required"),
+  fullName: z
+    .string()
+    .min(3, "Full name must be at least 3 characters")
+    .regex(/^[a-zA-Z\s'.\-]+$/, "Full name must only contain letters and spaces"),
+  email: z.string().email("Valid email address is required for official tax invoice"),
+  phone: z
+    .string()
+    .min(9, "Phone number must be at least 9 digits")
+    .max(20, "Phone number is too long")
+    .refine((val) => {
+      if (/[a-zA-Z]/.test(val)) return false;
+      const digits = val.replace(/\D/g, "");
+      return digits.length >= 9 && digits.length <= 15 && !val.includes("0000000");
+    }, "Phone number must contain only numbers (e.g. 056 103 6858 or +971 56 103 6858)"),
   emirate: z.enum([
     "Dubai",
     "Abu Dhabi",
@@ -26,21 +37,34 @@ const CheckoutSchema = z.object({
     "Umm Al Quwain",
     "Fujairah",
   ]),
-  area: z.string().min(2, "Area/District is required"),
+  area: z.string().min(2, "Area or district is required"),
   streetAddress: z.string().min(3, "Street address is required"),
-  buildingName: z.string().min(1, "Building or villa name is required for delivery"),
+  buildingName: z.string().min(2, "Building or villa name is required for delivery"),
   apartmentNumber: z.string().min(1, "Apartment or suite number is required for delivery"),
-  customerTRN: z.string().optional(),
+  customerTRN: z
+    .string()
+    .optional()
+    .refine((val) => !val || /^\d{15}$/.test(val.trim()), "FTA TRN must be exactly 15 numeric digits"),
   companyName: z.string().optional(),
   deliveryMethod: z.enum(["standard", "express"]),
   paymentMethod: z.enum(["card_stripe", "cod", "tabby"]),
   couponCode: z.string().optional(),
   cardDetails: z
     .object({
-      cardNumber: z.string().min(14, "Card number is required"),
-      cardHolder: z.string().min(2, "Cardholder name is required"),
-      expiryDate: z.string().min(4, "Expiry date (MM/YY) is required"),
-      cvv: z.string().min(3).max(4, "CVV is required"),
+      cardNumber: z
+        .string()
+        .refine((val) => {
+          const digits = val.replace(/\D/g, "");
+          return digits.length >= 15 && digits.length <= 16;
+        }, "Card number must be 15 or 16 numeric digits"),
+      cardHolder: z
+        .string()
+        .min(2, "Cardholder name is required")
+        .regex(/^[a-zA-Z\s'.\-]+$/, "Cardholder name must only contain letters"),
+      expiryDate: z
+        .string()
+        .regex(/^(0[1-9]|1[0-2])\/\d{2}$/, "Expiry date must be in MM/YY format"),
+      cvv: z.string().regex(/^\d{3,4}$/, "CVV must be 3 or 4 numbers"),
     })
     .optional(),
   items: z.array(
@@ -56,7 +80,12 @@ export type CheckoutInput = z.infer<typeof CheckoutSchema>;
 
 export async function processCheckoutAction(input: CheckoutInput) {
   // 1. Validate inputs with Zod
-  const validated = CheckoutSchema.parse(input);
+  const result = CheckoutSchema.safeParse(input);
+  if (!result.success) {
+    const firstIssue = result.error.issues[0];
+    throw new Error(firstIssue?.message || "Invalid checkout details provided.");
+  }
+  const validated = result.data;
 
   // 2. Resolve items & prices securely on server from Supabase and persistent store
   const allLiveProducts = await getProducts();

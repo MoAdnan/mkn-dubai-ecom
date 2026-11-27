@@ -11,6 +11,7 @@ import {
   ExternalLink,
   Building2,
 } from "lucide-react";
+import { ContactInquiryForm } from "@/components/contact-form";
 
 export const metadata: Metadata = {
   title: "Contact & WhatsApp Support | MKN Electronics Dubai",
@@ -192,83 +193,7 @@ export default function ContactPage() {
               </p>
             </div>
 
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                alert(
-                  "Thank you for contacting MKN Dubai. Your message has been received and our team will reply shortly."
-                );
-              }}
-              className="space-y-4 text-xs"
-            >
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="font-medium text-foreground block mb-1">Your Full Name *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Mohammed Al-Hashimi"
-                    className="w-full p-2.5 rounded-xl bg-muted/40 border border-border/80 text-xs focus:outline-none focus:border-cyan-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="font-medium text-foreground block mb-1">Email Address *</label>
-                  <input
-                    type="email"
-                    required
-                    placeholder="name@example.ae"
-                    className="w-full p-2.5 rounded-xl bg-muted/40 border border-border/80 text-xs focus:outline-none focus:border-cyan-500"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="font-medium text-foreground block mb-1">UAE Phone Number</label>
-                  <input
-                    type="tel"
-                    placeholder="+971 50 000 0000"
-                    className="w-full p-2.5 rounded-xl bg-muted/40 border border-border/80 text-xs font-mono focus:outline-none focus:border-cyan-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="font-medium text-foreground block mb-1">Inquiry Subject</label>
-                  <select className="w-full p-2.5 rounded-xl bg-muted/40 border border-border/80 text-xs focus:outline-none focus:border-cyan-500 cursor-pointer">
-                    <option value="general">Product Availability & Pricing</option>
-                    <option value="delivery">Same-Day Express Delivery</option>
-                    <option value="orders">Existing Order Tracking</option>
-                    <option value="b2b">Corporate / B2B Quotation</option>
-                    <option value="warranty">Warranty & Repairs</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="font-medium text-foreground block mb-1">Your Message *</label>
-                <textarea
-                  rows={4}
-                  required
-                  placeholder="How can our Dubai electronics specialists assist you today?"
-                  className="w-full p-2.5 rounded-xl bg-muted/40 border border-border/80 text-xs focus:outline-none focus:border-cyan-500"
-                />
-              </div>
-
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
-                <button
-                  type="submit"
-                  className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-cyan-500 text-black font-bold text-xs hover:bg-cyan-400 shadow-md shadow-cyan-500/20 transition-all cursor-pointer"
-                >
-                  Send Inquiry Message
-                </button>
-
-                <span className="text-[11px] text-muted-foreground flex items-center gap-1">
-                  <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>Encrypted & Privacy Protected</span>
-                </span>
-              </div>
-            </form>
+            <ContactInquiryForm />
           </div>
         </div>
       </div>

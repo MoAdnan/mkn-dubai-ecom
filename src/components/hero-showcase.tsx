@@ -120,7 +120,7 @@ export function HeroShowcase({ products }: HeroShowcaseProps) {
                 isOutOfStock ? "bg-rose-400" : "bg-emerald-400 animate-ping"
               }`}
             />
-            <span>{isOutOfStock ? "Out of Stock" : "Dubai In Stock"}</span>
+            <span>{isOutOfStock ? "Out of Stock" : "In Stock"}</span>
           </div>
         </div>
 

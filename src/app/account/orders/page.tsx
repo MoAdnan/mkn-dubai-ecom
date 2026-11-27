@@ -7,9 +7,12 @@ export const metadata = {
   title: "My Orders | MKN Electronics Dubai",
 };
 
-export default async function CustomerOrdersPage() {
+async function OrdersLoader() {
   const initialOrders = await getCustomerOrdersAction();
+  return <CustomerOrdersClient initialOrders={initialOrders} />;
+}
 
+export default function CustomerOrdersPage() {
   return (
     <Suspense
       fallback={
@@ -19,7 +22,7 @@ export default async function CustomerOrdersPage() {
         </div>
       }
     >
-      <CustomerOrdersClient initialOrders={initialOrders} />
+      <OrdersLoader />
     </Suspense>
   );
 }

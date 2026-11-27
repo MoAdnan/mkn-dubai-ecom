@@ -107,6 +107,31 @@ function CheckoutForm() {
 
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
+
+  // Helper to clear individual field error upon user editing
+  const clearFieldError = (key: string) => {
+    setFieldErrors((prev) => {
+      if (!prev[key]) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  };
+
+  // Full Name handler: enforce alphabet and valid punctuation only
+  const handleFullNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const cleaned = e.target.value.replace(/[^a-zA-Z\s'.\-]/g, "");
+    setFullName(cleaned);
+    clearFieldError("fullName");
+  };
+
+  // Phone number handler: enforce numbers only (digits, +, spaces, hyphens)
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const cleaned = e.target.value.replace(/[^\d+\s-]/g, "");
+    setPhone(cleaned);
+    clearFieldError("phone");
+  };
 
   // Interactive Payment Gateway Step Simulation
   const [paymentStep, setPaymentStep] = React.useState<
@@ -141,6 +166,7 @@ function CheckoutForm() {
     const raw = e.target.value.replace(/\D/g, "").slice(0, 16);
     const parts = raw.match(/.{1,4}/g);
     setCardNumber(parts ? parts.join(" ") : raw);
+    clearFieldError("cardNumber");
   };
 
   const handleExpiryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -150,11 +176,13 @@ function CheckoutForm() {
     } else {
       setExpiryDate(raw);
     }
+    clearFieldError("expiryDate");
   };
 
   const handleCvvChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value.replace(/\D/g, "").slice(0, 4);
     setCvv(raw);
+    clearFieldError("cvv");
   };
 
   const fillTestCard = () => {
@@ -162,6 +190,14 @@ function CheckoutForm() {
     setCardHolder(fullName || "MKN Customer");
     setExpiryDate("12/28");
     setCvv("123");
+    setFieldErrors((prev) => {
+      const next = { ...prev };
+      delete next.cardNumber;
+      delete next.cardHolder;
+      delete next.expiryDate;
+      delete next.cvv;
+      return next;
+    });
   };
 
   const cardBrand = React.useMemo(() => {
@@ -172,60 +208,147 @@ function CheckoutForm() {
     return "CARD";
   }, [cardNumber]);
 
+  const validateAllFields = (): boolean => {
+    const errors: Record<string, string> = {};
+
+    // 1. Full Legal Name
+    const cleanName = fullName.trim();
+    if (!cleanName) {
+      errors.fullName = "Full Legal Name is required for courier delivery.";
+    } else if (cleanName.length < 3) {
+      errors.fullName = "Full Legal Name must be at least 3 characters.";
+    } else if (!/^[a-zA-Z\s'.\-]+$/.test(cleanName)) {
+      errors.fullName = "Full Legal Name must only contain letters.";
+    }
+
+    // 2. Email Address
+    const cleanEmail = email.trim();
+    if (!cleanEmail) {
+      errors.email = "Email Address is required for your official FTA Tax Invoice.";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      errors.email = "Please enter a valid email address (e.g. name@example.com).";
+    }
+
+    // 3. UAE Mobile Phone (Strictly Numbers Only)
+    const cleanPhone = phone.trim();
+    const phoneDigits = cleanPhone.replace(/\D/g, "");
+    if (!cleanPhone) {
+      errors.phone = "UAE Mobile Phone Number is required.";
+    } else if (/[a-zA-Z]/.test(cleanPhone)) {
+      errors.phone = "Phone number must contain numbers only (no letters).";
+    } else if (phoneDigits.length < 9) {
+      errors.phone = "Phone number is too short (minimum 9 digits, e.g. 056 103 6858).";
+    } else if (phoneDigits.length > 15) {
+      errors.phone = "Phone number is too long (maximum 15 digits).";
+    } else if (cleanPhone.includes("0000000")) {
+      errors.phone = "Please enter a valid, active mobile phone number.";
+    }
+
+    // 4. Area / District
+    if (!area.trim() || area.trim().length < 2) {
+      errors.area = "Area or district is required (e.g. Downtown Dubai / Deira).";
+    }
+
+    // 5. Street Address
+    if (!streetAddress.trim() || streetAddress.trim().length < 3) {
+      errors.streetAddress = "Street Address is required for courier dispatch.";
+    }
+
+    // 6. Building / Tower Name
+    if (!buildingName.trim() || buildingName.trim().length < 2) {
+      errors.buildingName = "Building or villa name is required for delivery.";
+    }
+
+    // 7. Apartment / Office Number
+    if (!apartmentNumber.trim()) {
+      errors.apartmentNumber = "Apartment, suite, or villa number is required.";
+    }
+
+    // 8. B2B / Tax Invoice fields
+    if (isB2B) {
+      if (!companyName.trim() || companyName.trim().length < 2) {
+        errors.companyName = "Registered company name is required for B2B tax invoice.";
+      }
+      const trnClean = customerTRN.trim();
+      if (!trnClean) {
+        errors.customerTRN = "FTA 15-digit TRN is required for B2B orders.";
+      } else if (!/^\d{15}$/.test(trnClean)) {
+        errors.customerTRN = "UAE TRN must be exactly 15 numeric digits (starts with 100).";
+      }
+    }
+
+    // 9. Card Details (if card_stripe selected)
+    if (paymentMethod === "card_stripe") {
+      const cardDigits = cardNumber.replace(/\D/g, "");
+      if (!cardDigits) {
+        errors.cardNumber = "Card number is required.";
+      } else if (cardDigits.length < 15 || cardDigits.length > 16) {
+        errors.cardNumber = "Card number must be 15 or 16 numeric digits.";
+      }
+
+      if (!cardHolder.trim() || cardHolder.trim().length < 2) {
+        errors.cardHolder = "Cardholder name is required.";
+      } else if (!/^[a-zA-Z\s'.\-]+$/.test(cardHolder.trim())) {
+        errors.cardHolder = "Cardholder name must contain letters only.";
+      }
+
+      if (!expiryDate.trim()) {
+        errors.expiryDate = "Expiry date is required.";
+      } else if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(expiryDate.trim())) {
+        errors.expiryDate = "Expiry date must be in MM/YY format (e.g. 12/28).";
+      }
+
+      const cvvClean = cvv.trim();
+      if (!cvvClean) {
+        errors.cvv = "CVV is required.";
+      } else if (!/^\d{3,4}$/.test(cvvClean)) {
+        errors.cvv = "CVV must be 3 or 4 numbers.";
+      }
+    }
+
+    setFieldErrors(errors);
+
+    const errorKeys = Object.keys(errors);
+    if (errorKeys.length > 0) {
+      const firstKey = errorKeys[0];
+      const targetElement = document.getElementById(`field-${firstKey}`);
+      if (targetElement) {
+        targetElement.scrollIntoView({ behavior: "smooth", block: "center" });
+        setTimeout(() => {
+          targetElement.focus();
+        }, 200);
+      }
+      setError("Please fix the highlighted fields with valid information before proceeding.");
+      return false;
+    }
+
+    return true;
+  };
+
   const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (items.length === 0) {
+      setError("Your cart is empty. Please add items before checking out.");
+      return;
+    }
+
+    if (!validateAllFields()) {
+      return;
+    }
+
+    // Check COD limit (standard Dubai courier threshold is AED 5,000)
+    if (paymentMethod === "cod" && totalPayableFils > aedToFils(5000)) {
+      setError(
+        "Cash on Delivery is limited to AED 5,000 as per UAE courier safety limits. Please select Card or Tabby for this high-value order."
+      );
+      return;
+    }
+
     setLoading(true);
 
     try {
-      if (items.length === 0) {
-        throw new Error("Your cart is empty. Please add items before checking out.");
-      }
-
-      if (!fullName.trim() || fullName.trim().length < 2) {
-        throw new Error("Full Legal Name is required for UAE delivery.");
-      }
-      if (!email.trim() || !email.includes("@")) {
-        throw new Error("A valid Email Address is required to receive your FTA Tax Invoice.");
-      }
-      if (!phone.trim() || phone.trim().length < 7 || phone.includes("0000")) {
-        throw new Error("A valid UAE Mobile Phone Number is required for courier dispatch.");
-      }
-      if (!area.trim()) {
-        throw new Error("Area / District is required for delivery.");
-      }
-      if (!streetAddress.trim()) {
-        throw new Error("Street Address is required for delivery.");
-      }
-      if (!buildingName.trim()) {
-        throw new Error("Building or Villa Name is required for courier delivery.");
-      }
-      if (!apartmentNumber.trim()) {
-        throw new Error("Apartment / Villa / Suite Number is required for delivery.");
-      }
-
-      if (paymentMethod === "card_stripe") {
-        if (!cardNumber.trim() || cardNumber.replace(/\s+/g, "").length < 15) {
-          throw new Error("Please enter a valid 16-digit card number.");
-        }
-        if (!cardHolder.trim()) {
-          throw new Error("Cardholder Name is required.");
-        }
-        if (!expiryDate.trim() || !expiryDate.includes("/")) {
-          throw new Error("Card expiry date (MM/YY) is required.");
-        }
-        if (!cvv.trim() || cvv.length < 3) {
-          throw new Error("Card CVV security code is required.");
-        }
-      }
-
-      // Check COD limit (standard Dubai courier threshold is AED 5,000)
-      if (paymentMethod === "cod" && totalPayableFils > aedToFils(5000)) {
-        throw new Error(
-          "Cash on Delivery is limited to AED 5,000 as per UAE courier safety limits. Please select Card or Tabby for this high-value order."
-        );
-      }
-
       // If Card or Tabby Payment, show interactive payment verification stages
       if (paymentMethod === "card_stripe" || paymentMethod === "tabby") {
         setPaymentStep("authorizing");
@@ -401,7 +524,7 @@ function CheckoutForm() {
         </div>
       )}
 
-      <form onSubmit={handleSubmitOrder}>
+      <form noValidate onSubmit={handleSubmitOrder}>
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
           {/* Left Column: Delivery Address, Shipping, & Payment */}
           <div className="lg:col-span-7 space-y-8">
@@ -417,15 +540,26 @@ function CheckoutForm() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                 <div>
                   <label className="font-medium text-foreground block mb-1">
-                    Full Name *
+                    Full Legal Name *
                   </label>
                   <input
+                    id="field-fullName"
                     type="text"
-                    required
+                    placeholder="Adnan Al-Hashimi"
                     value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    className="w-full p-2.5 rounded-xl bg-muted/40 border border-border/80 focus:outline-none focus:border-cyan-500"
+                    onChange={handleFullNameChange}
+                    className={`w-full p-2.5 rounded-xl bg-muted/40 border transition-colors focus:outline-none ${
+                      fieldErrors.fullName
+                        ? "border-rose-500 bg-rose-500/5 focus:border-rose-500"
+                        : "border-border/80 focus:border-cyan-500"
+                    }`}
                   />
+                  {fieldErrors.fullName && (
+                    <p className="mt-1 text-[11px] text-rose-400 font-medium flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                      <span>{fieldErrors.fullName}</span>
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -433,12 +567,26 @@ function CheckoutForm() {
                     Email Address (For Tax Invoice) *
                   </label>
                   <input
+                    id="field-email"
                     type="email"
-                    required
+                    placeholder="name@example.com"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full p-2.5 rounded-xl bg-muted/40 border border-border/80 focus:outline-none focus:border-cyan-500"
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      clearFieldError("email");
+                    }}
+                    className={`w-full p-2.5 rounded-xl bg-muted/40 border transition-colors focus:outline-none ${
+                      fieldErrors.email
+                        ? "border-rose-500 bg-rose-500/5 focus:border-rose-500"
+                        : "border-border/80 focus:border-cyan-500"
+                    }`}
                   />
+                  {fieldErrors.email && (
+                    <p className="mt-1 text-[11px] text-rose-400 font-medium flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                      <span>{fieldErrors.email}</span>
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -446,13 +594,28 @@ function CheckoutForm() {
                     UAE Mobile Number *
                   </label>
                   <input
+                    id="field-phone"
                     type="tel"
-                    required
-                    placeholder="+971 50 123 4567"
+                    inputMode="numeric"
+                    placeholder="056 103 6858 or +971 56 103 6858"
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className="w-full p-2.5 rounded-xl bg-muted/40 border border-border/80 focus:outline-none focus:border-cyan-500"
+                    onChange={handlePhoneChange}
+                    className={`w-full p-2.5 rounded-xl bg-muted/40 border transition-colors focus:outline-none ${
+                      fieldErrors.phone
+                        ? "border-rose-500 bg-rose-500/5 focus:border-rose-500"
+                        : "border-border/80 focus:border-cyan-500"
+                    }`}
                   />
+                  {fieldErrors.phone ? (
+                    <p className="mt-1 text-[11px] text-rose-400 font-medium flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                      <span>{fieldErrors.phone}</span>
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-[10px] text-muted-foreground">
+                      Numbers only for courier dispatch updates
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -460,8 +623,12 @@ function CheckoutForm() {
                     Emirate *
                   </label>
                   <select
+                    id="field-emirate"
                     value={emirate}
-                    onChange={(e) => setEmirate(e.target.value as any)}
+                    onChange={(e) => {
+                      setEmirate(e.target.value as any);
+                      clearFieldError("emirate");
+                    }}
                     className="w-full p-2.5 rounded-xl bg-muted/40 border border-border/80 focus:outline-none focus:border-cyan-500"
                   >
                     {UAE_EMIRATES.map((em) => (
@@ -477,13 +644,26 @@ function CheckoutForm() {
                     Area / District *
                   </label>
                   <input
+                    id="field-area"
                     type="text"
-                    required
-                    placeholder="e.g. Downtown Dubai / Al Barsha"
+                    placeholder="e.g. Downtown Dubai / Deira / Al Barsha"
                     value={area}
-                    onChange={(e) => setArea(e.target.value)}
-                    className="w-full p-2.5 rounded-xl bg-muted/40 border border-border/80 focus:outline-none focus:border-cyan-500"
+                    onChange={(e) => {
+                      setArea(e.target.value);
+                      clearFieldError("area");
+                    }}
+                    className={`w-full p-2.5 rounded-xl bg-muted/40 border transition-colors focus:outline-none ${
+                      fieldErrors.area
+                        ? "border-rose-500 bg-rose-500/5 focus:border-rose-500"
+                        : "border-border/80 focus:border-cyan-500"
+                    }`}
                   />
+                  {fieldErrors.area && (
+                    <p className="mt-1 text-[11px] text-rose-400 font-medium flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                      <span>{fieldErrors.area}</span>
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -491,13 +671,26 @@ function CheckoutForm() {
                     Street Address *
                   </label>
                   <input
+                    id="field-streetAddress"
                     type="text"
-                    required
-                    placeholder="e.g. Sheikh Zayed Road"
+                    placeholder="e.g. Sheikh Zayed Road / Al Rigga Street"
                     value={streetAddress}
-                    onChange={(e) => setStreetAddress(e.target.value)}
-                    className="w-full p-2.5 rounded-xl bg-muted/40 border border-border/80 focus:outline-none focus:border-cyan-500"
+                    onChange={(e) => {
+                      setStreetAddress(e.target.value);
+                      clearFieldError("streetAddress");
+                    }}
+                    className={`w-full p-2.5 rounded-xl bg-muted/40 border transition-colors focus:outline-none ${
+                      fieldErrors.streetAddress
+                        ? "border-rose-500 bg-rose-500/5 focus:border-rose-500"
+                        : "border-border/80 focus:border-cyan-500"
+                    }`}
                   />
+                  {fieldErrors.streetAddress && (
+                    <p className="mt-1 text-[11px] text-rose-400 font-medium flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                      <span>{fieldErrors.streetAddress}</span>
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -505,27 +698,53 @@ function CheckoutForm() {
                     Building / Tower Name *
                   </label>
                   <input
+                    id="field-buildingName"
                     type="text"
-                    required
                     placeholder="e.g. Burj Crown Tower / Villa 12"
                     value={buildingName}
-                    onChange={(e) => setBuildingName(e.target.value)}
-                    className="w-full p-2.5 rounded-xl bg-muted/40 border border-border/80 focus:outline-none focus:border-cyan-500"
+                    onChange={(e) => {
+                      setBuildingName(e.target.value);
+                      clearFieldError("buildingName");
+                    }}
+                    className={`w-full p-2.5 rounded-xl bg-muted/40 border transition-colors focus:outline-none ${
+                      fieldErrors.buildingName
+                        ? "border-rose-500 bg-rose-500/5 focus:border-rose-500"
+                        : "border-border/80 focus:border-cyan-500"
+                    }`}
                   />
+                  {fieldErrors.buildingName && (
+                    <p className="mt-1 text-[11px] text-rose-400 font-medium flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                      <span>{fieldErrors.buildingName}</span>
+                    </p>
+                  )}
                 </div>
 
                 <div>
                   <label className="font-medium text-foreground block mb-1">
-                    Apartment / Villa Number *
+                    Apartment / Suite / Villa Number *
                   </label>
                   <input
+                    id="field-apartmentNumber"
                     type="text"
-                    required
                     placeholder="e.g. Apt 1402 / Unit 4B"
                     value={apartmentNumber}
-                    onChange={(e) => setApartmentNumber(e.target.value)}
-                    className="w-full p-2.5 rounded-xl bg-muted/40 border border-border/80 focus:outline-none focus:border-cyan-500"
+                    onChange={(e) => {
+                      setApartmentNumber(e.target.value);
+                      clearFieldError("apartmentNumber");
+                    }}
+                    className={`w-full p-2.5 rounded-xl bg-muted/40 border transition-colors focus:outline-none ${
+                      fieldErrors.apartmentNumber
+                        ? "border-rose-500 bg-rose-500/5 focus:border-rose-500"
+                        : "border-border/80 focus:border-cyan-500"
+                    }`}
                   />
+                  {fieldErrors.apartmentNumber && (
+                    <p className="mt-1 text-[11px] text-rose-400 font-medium flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                      <span>{fieldErrors.apartmentNumber}</span>
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -545,27 +764,58 @@ function CheckoutForm() {
                   <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs animate-in fade-in">
                     <div>
                       <label className="font-medium text-foreground block mb-1">
-                        Registered Company Name
+                        Registered Company Name *
                       </label>
                       <input
+                        id="field-companyName"
                         type="text"
                         placeholder="e.g. Al-Hashimi Ventures LLC"
                         value={companyName}
-                        onChange={(e) => setCompanyName(e.target.value)}
-                        className="w-full p-2 rounded-lg bg-background border border-border/80 text-xs"
+                        onChange={(e) => {
+                          setCompanyName(e.target.value);
+                          clearFieldError("companyName");
+                        }}
+                        className={`w-full p-2 rounded-lg bg-background border text-xs transition-colors focus:outline-none ${
+                          fieldErrors.companyName
+                            ? "border-rose-500 bg-rose-500/5 focus:border-rose-500"
+                            : "border-border/80 focus:border-cyan-500"
+                        }`}
                       />
+                      {fieldErrors.companyName && (
+                        <p className="mt-1 text-[11px] text-rose-400 font-medium flex items-center gap-1">
+                          <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                          <span>{fieldErrors.companyName}</span>
+                        </p>
+                      )}
                     </div>
                     <div>
                       <label className="font-medium text-foreground block mb-1">
-                        UAE TRN (15 digits)
+                        UAE TRN (15 digits) *
                       </label>
                       <input
+                        id="field-customerTRN"
                         type="text"
+                        inputMode="numeric"
+                        maxLength={15}
                         placeholder="100XXXXXXXXXXXX"
                         value={customerTRN}
-                        onChange={(e) => setCustomerTRN(e.target.value)}
-                        className="w-full p-2 rounded-lg bg-background border border-border/80 text-xs font-mono"
+                        onChange={(e) => {
+                          const numeric = e.target.value.replace(/\D/g, "").slice(0, 15);
+                          setCustomerTRN(numeric);
+                          clearFieldError("customerTRN");
+                        }}
+                        className={`w-full p-2 rounded-lg bg-background border text-xs font-mono transition-colors focus:outline-none ${
+                          fieldErrors.customerTRN
+                            ? "border-rose-500 bg-rose-500/5 focus:border-rose-500"
+                            : "border-border/80 focus:border-cyan-500"
+                        }`}
                       />
+                      {fieldErrors.customerTRN && (
+                        <p className="mt-1 text-[11px] text-rose-400 font-medium flex items-center gap-1">
+                          <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                          <span>{fieldErrors.customerTRN}</span>
+                        </p>
+                      )}
                     </div>
                   </div>
                 )}
@@ -700,69 +950,116 @@ function CheckoutForm() {
                       {/* Card Number */}
                       <div>
                         <label className="font-medium text-foreground block mb-1 text-[11px]">
-                          Card Number
+                          Card Number *
                         </label>
                         <div className="relative">
                           <input
+                            id="field-cardNumber"
                             type="text"
-                            required
+                            inputMode="numeric"
                             placeholder="4242 4242 4242 4242"
                             value={cardNumber}
                             onChange={handleCardNumberChange}
                             maxLength={19}
-                            className="w-full p-2.5 rounded-xl bg-background border border-border/80 text-xs font-mono text-foreground focus:outline-none focus:border-cyan-500 pr-16"
+                            className={`w-full p-2.5 rounded-xl bg-background border text-xs font-mono text-foreground focus:outline-none pr-16 transition-colors ${
+                              fieldErrors.cardNumber
+                                ? "border-rose-500 bg-rose-500/5 focus:border-rose-500"
+                                : "border-border/80 focus:border-cyan-500"
+                            }`}
                           />
                           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
                             {cardBrand}
                           </span>
                         </div>
+                        {fieldErrors.cardNumber && (
+                          <p className="mt-1 text-[11px] text-rose-400 font-medium flex items-center gap-1">
+                            <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                            <span>{fieldErrors.cardNumber}</span>
+                          </p>
+                        )}
                       </div>
 
                       {/* Cardholder, Expiry, CVV */}
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div className="sm:col-span-1">
                           <label className="font-medium text-foreground block mb-1 text-[11px]">
-                            Cardholder Name
+                            Cardholder Name *
                           </label>
                           <input
+                            id="field-cardHolder"
                             type="text"
-                            required
                             placeholder="Name on card"
                             value={cardHolder}
-                            onChange={(e) => setCardHolder(e.target.value)}
-                            className="w-full p-2.5 rounded-xl bg-background border border-border/80 text-xs text-foreground focus:outline-none focus:border-cyan-500"
+                            onChange={(e) => {
+                              const cleaned = e.target.value.replace(/[^a-zA-Z\s'.\-]/g, "");
+                              setCardHolder(cleaned);
+                              clearFieldError("cardHolder");
+                            }}
+                            className={`w-full p-2.5 rounded-xl bg-background border text-xs text-foreground focus:outline-none transition-colors ${
+                              fieldErrors.cardHolder
+                                ? "border-rose-500 bg-rose-500/5 focus:border-rose-500"
+                                : "border-border/80 focus:border-cyan-500"
+                            }`}
                           />
+                          {fieldErrors.cardHolder && (
+                            <p className="mt-1 text-[11px] text-rose-400 font-medium flex items-center gap-1">
+                              <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                              <span>{fieldErrors.cardHolder}</span>
+                            </p>
+                          )}
                         </div>
 
                         <div>
                           <label className="font-medium text-foreground block mb-1 text-[11px]">
-                            Expires (MM/YY)
+                            Expires (MM/YY) *
                           </label>
                           <input
+                            id="field-expiryDate"
                             type="text"
-                            required
+                            inputMode="numeric"
                             placeholder="12/28"
                             value={expiryDate}
                             onChange={handleExpiryChange}
                             maxLength={5}
-                            className="w-full p-2.5 rounded-xl bg-background border border-border/80 text-xs font-mono text-foreground focus:outline-none focus:border-cyan-500 text-center"
+                            className={`w-full p-2.5 rounded-xl bg-background border text-xs font-mono text-foreground focus:outline-none text-center transition-colors ${
+                              fieldErrors.expiryDate
+                                ? "border-rose-500 bg-rose-500/5 focus:border-rose-500"
+                                : "border-border/80 focus:border-cyan-500"
+                            }`}
                           />
+                          {fieldErrors.expiryDate && (
+                            <p className="mt-1 text-[11px] text-rose-400 font-medium flex items-center gap-1">
+                              <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                              <span>{fieldErrors.expiryDate}</span>
+                            </p>
+                          )}
                         </div>
 
                         <div>
                           <label className="font-medium text-foreground block mb-1 text-[11px] flex items-center justify-between">
-                            <span>CVV / CVC</span>
+                            <span>CVV / CVC *</span>
                             <span className="text-[10px] text-muted-foreground">3-4 digits</span>
                           </label>
                           <input
+                            id="field-cvv"
                             type="password"
-                            required
+                            inputMode="numeric"
                             placeholder="123"
                             value={cvv}
                             onChange={handleCvvChange}
                             maxLength={4}
-                            className="w-full p-2.5 rounded-xl bg-background border border-border/80 text-xs font-mono text-foreground focus:outline-none focus:border-cyan-500 text-center"
+                            className={`w-full p-2.5 rounded-xl bg-background border text-xs font-mono text-foreground focus:outline-none text-center transition-colors ${
+                              fieldErrors.cvv
+                                ? "border-rose-500 bg-rose-500/5 focus:border-rose-500"
+                                : "border-border/80 focus:border-cyan-500"
+                            }`}
                           />
+                          {fieldErrors.cvv && (
+                            <p className="mt-1 text-[11px] text-rose-400 font-medium flex items-center gap-1">
+                              <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                              <span>{fieldErrors.cvv}</span>
+                            </p>
+                          )}
                         </div>
                       </div>
 

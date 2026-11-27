@@ -51,24 +51,7 @@ export async function getUserAddressesAction(): Promise<UserAddress[]> {
     console.warn("Supabase addresses fetch note:", err);
   }
 
-  // Fallback to local or default address
-  if (!localAddresses[user.id] || localAddresses[user.id].length === 0) {
-    localAddresses[user.id] = [
-      {
-        id: `addr-${Date.now()}`,
-        recipientName: user.name,
-        phone: user.phone,
-        emirate: user.emirate || "Dubai",
-        area: "Downtown Dubai",
-        streetAddress: "Sheikh Mohammed bin Rashid Blvd",
-        buildingName: "Burj Views",
-        apartmentNumber: "Suite 1204",
-        isDefault: true,
-      },
-    ];
-  }
-
-  return localAddresses[user.id];
+  return localAddresses[user.id] || [];
 }
 
 export async function saveUserAddressAction(

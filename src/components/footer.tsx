@@ -95,7 +95,7 @@ export function Footer() {
             <div className="space-y-2 text-xs pt-1">
               <p className="flex items-center gap-2">
                 <MapPin className="w-3.5 h-3.5 text-cyan-400" />
-                <span>Showroom & Warehouse: Al Quoz Industrial Area 1, Dubai, UAE</span>
+                <span>Showroom & Warehouse: Deira, Dubai, UAE</span>
               </p>
               <p className="flex items-center gap-2">
                 <Phone className="w-3.5 h-3.5 text-emerald-400" />
