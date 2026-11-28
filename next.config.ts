@@ -13,6 +13,14 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "icqovongnsiianjdxdzg.supabase.co",
       },
+      {
+        protocol: "https",
+        hostname: "**",
+      },
+      {
+        protocol: "http",
+        hostname: "**",
+      },
     ],
   },
   turbopack: {

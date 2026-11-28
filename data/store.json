@@ -1,6 +1,80 @@
 {
-  "products": [],
+  "products": [
+    {
+      "id": "prod-1795865133466",
+      "category_id": "cat-1",
+      "category_name": "Smartphones",
+      "category_slug": "smartphones",
+      "brand_id": "b-1",
+      "brand_name": "Apple",
+      "brand_slug": "apple",
+      "title": "apple",
+      "slug": "apple",
+      "short_description": "New flagship device with official UAE warranty.",
+      "description": "Official distributor stock with 1-year warranty and same-day delivery.",
+      "sku": "MKN-112500",
+      "base_price_fils": 199900,
+      "sale_price_fils": null,
+      "stock_quantity": 20,
+      "rating": 5,
+      "reviews_count": 0,
+      "is_featured": false,
+      "is_deal": false,
+      "warranty_months": 12,
+      "warranty_type": "Official UAE Distributor Warranty",
+      "images": [
+        {
+          "url": "https://icqovongnsiianjdxdzg.supabase.co/storage/v1/object/public/products/catalog/prod_1795865127676_kjl3u9.png",
+          "alt": "apple",
+          "is_primary": true
+        }
+      ],
+      "variants": [],
+      "specs": {
+        "Warranty": "12 Months TDRA approved"
+      }
+    }
+  ],
   "orders": [
+    {
+      "id": "ord-61610",
+      "orderNumber": "MKN-2026-61610",
+      "invoiceNumber": "INV-2026-61610",
+      "customer": "MKN Executive Admin",
+      "email": "admin@mknelectronics.ae",
+      "phone": "+971 4 398 2211",
+      "emirate": "Dubai",
+      "address": "fdfd, ed, fd, fd",
+      "items": [
+        {
+          "title": "MKN Dubai Flagship Testing Device",
+          "sku": "MKN-REAL-001",
+          "quantity": 1,
+          "priceFils": 129900
+        },
+        {
+          "title": "apple",
+          "sku": "MKN-112500",
+          "quantity": 1,
+          "priceFils": 199900
+        }
+      ],
+      "itemsSummary": "MKN Dubai Flagship Testing Device (x1), apple (x1)",
+      "subtotalFils": 329800,
+      "vatFils": 15705,
+      "shippingFils": 3500,
+      "discountFils": 0,
+      "totalFils": 333300,
+      "paymentMethod": "tabby",
+      "paymentStatus": "paid",
+      "orderStatus": "processing",
+      "trackingNumber": "DUB-EXP-61610",
+      "courierName": "Dubai Same-Day Express",
+      "date": "28 Nov 2026",
+      "createdAt": "2026-11-28T11:26:18.460Z",
+      "isB2B": true,
+      "customerTRN": "100482918200003"
+    },
     {
       "id": "ord-62293",
       "orderNumber": "MKN-2026-62293",
@@ -515,6 +589,23 @@
     }
   ],
   "invoices": [
+    {
+      "id": "inv-1795865178467",
+      "invoiceNumber": "INV-2026-61610",
+      "orderNumber": "MKN-2026-61610",
+      "invoiceType": "full",
+      "issueDate": "28 Nov 2026",
+      "customer": "MKN Executive Admin",
+      "email": "admin@mknelectronics.ae",
+      "phone": "+971 4 398 2211",
+      "address": "fdfd, ed, fd, fd",
+      "emirate": "Dubai",
+      "customerTRN": "100482918200003",
+      "subtotalFils": 329800,
+      "vatFils": 15705,
+      "totalFils": 333300,
+      "createdAt": "2026-11-28T11:26:18.467Z"
+    },
     {
       "id": "inv-1795707043389",
       "invoiceNumber": "INV-2026-62293",

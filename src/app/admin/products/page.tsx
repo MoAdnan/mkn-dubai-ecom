@@ -308,7 +308,7 @@ export default function AdminProductsPage() {
                       <div className="flex items-center gap-3">
                         <div className="relative w-10 h-10 rounded-lg bg-muted/40 p-1 flex-shrink-0">
                           <Image
-                            src={product.images[0]?.url || ""}
+                            src={product.images[0]?.url || "/placeholder.png"}
                             alt={product.title}
                             fill
                             className="object-contain"

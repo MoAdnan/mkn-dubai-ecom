@@ -24,19 +24,53 @@ export async function saveProductAction(product: DemoProduct): Promise<DemoProdu
   // 1. Sync to Supabase cloud
   try {
     const supabase = createAdminClient();
-    await (supabase.from("products") as any).upsert({
-      title: product.title,
-      slug: product.slug,
-      sku: product.sku,
-      base_price_fils: product.base_price_fils,
-      sale_price_fils: product.sale_price_fils || null,
-      stock_quantity: product.stock_quantity,
-      short_description: product.short_description || "",
-      description: product.description || "",
-      is_published: true,
-      warranty_type: product.warranty_type || "Official UAE Distributor Warranty",
-      warranty_months: product.warranty_months || 12,
-    });
+    const { data: upserted, error: prodErr } = await (supabase.from("products") as any)
+      .upsert(
+        {
+          title: product.title,
+          slug: product.slug,
+          sku: product.sku,
+          base_price_fils: product.base_price_fils,
+          sale_price_fils: product.sale_price_fils || null,
+          stock_quantity: product.stock_quantity,
+          short_description: product.short_description || "",
+          description: product.description || "",
+          is_published: true,
+          warranty_type: product.warranty_type || "Official UAE Distributor Warranty",
+          warranty_months: product.warranty_months || 12,
+        },
+        { onConflict: "sku" }
+      )
+      .select("id")
+      .single();
+
+    if (prodErr) {
+      console.warn("Supabase product upsert note:", prodErr);
+    }
+
+    const prodId = upserted?.id;
+    if (prodId && product.images && product.images.length > 0) {
+      // Clean previous images for this product
+      await supabase.from("product_images").delete().eq("product_id", prodId);
+
+      // Insert new images with URLs
+      const rows = product.images
+        .filter((img) => img.url && img.url.trim())
+        .map((img, idx) => ({
+          product_id: prodId,
+          image_url: img.url.trim(),
+          alt_text: img.alt || product.title,
+          is_primary: idx === 0,
+          display_order: idx,
+        }));
+
+      if (rows.length > 0) {
+        const { error: imgErr } = await (supabase.from("product_images") as any).insert(rows);
+        if (imgErr) {
+          console.warn("Supabase product_images insert note:", imgErr);
+        }
+      }
+    }
   } catch (err) {
     console.warn("Supabase product upsert note:", err);
   }

@@ -185,7 +185,7 @@ export function ProductDetailView({
                   }}
                 >
                   <Image
-                    src={product.images[selectedImageIndex]?.url || product.images[0]?.url}
+                    src={product.images[selectedImageIndex]?.url || product.images[0]?.url || "/placeholder.png"}
                     alt={product.title}
                     fill
                     className="object-contain"
@@ -198,7 +198,7 @@ export function ProductDetailView({
             ) : (
               <div className="relative w-full h-full">
                 <Image
-                  src={product.images[selectedImageIndex]?.url || product.images[0]?.url}
+                  src={product.images[selectedImageIndex]?.url || product.images[0]?.url || "/placeholder.png"}
                   alt={product.title}
                   fill
                   priority
@@ -549,7 +549,7 @@ export function ProductDetailView({
           <div className="flex items-center gap-3">
             <div className="relative w-12 h-12 rounded-lg bg-muted/40 overflow-hidden hidden sm:block">
               <Image
-                src={product.images[0]?.url || ""}
+                src={product.images[0]?.url || "/placeholder.png"}
                 alt={product.title}
                 fill
                 className="object-contain p-1"

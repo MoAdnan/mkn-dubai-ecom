@@ -66,11 +66,36 @@ export async function getProducts(params: GetProductsParams = {}): Promise<DemoP
       is_deal: p.is_deal,
       warranty_months: p.warranty_months,
       warranty_type: p.warranty_type,
-      images: (p.product_images || []).map((img: any) => ({
-        url: img.image_url,
-        alt: img.alt_text || p.title,
-        is_primary: img.is_primary,
-      })),
+      images: (() => {
+        const dbImages = (p.product_images || [])
+          .filter((img: any) => img.image_url && img.image_url.trim().length > 0)
+          .map((img: any) => ({
+            url: img.image_url,
+            alt: img.alt_text || p.title,
+            is_primary: img.is_primary ?? true,
+          }));
+
+        if (dbImages.length > 0) return dbImages;
+
+        // Fallback to local store images if Supabase relations aren't populated
+        const stored = getStoredProducts();
+        const localMatch = stored.find(
+          (s) => s.sku === p.sku || s.slug === p.slug || s.id === p.id
+        );
+        if (localMatch?.images && localMatch.images.length > 0) {
+          const validLocal = localMatch.images.filter((img) => img.url && img.url.trim().length > 0);
+          if (validLocal.length > 0) return validLocal;
+        }
+
+        // Guaranteed valid image fallback
+        return [
+          {
+            url: "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?auto=format&fit=crop&w=1000&q=80",
+            alt: p.title,
+            is_primary: true,
+          },
+        ];
+      })(),
       variants: (p.product_variants || []).map((v: any) => ({
         id: v.id,
         title: v.title,
@@ -100,12 +125,20 @@ export async function getProductBySlug(slug: string): Promise<DemoProduct | null
 
 export async function getFeaturedProducts(): Promise<DemoProduct[]> {
   const all = await getProducts();
-  return all.filter((p) => p.is_featured);
+  const featured = all.filter((p) => p.is_featured);
+  if (featured.length > 0) return featured;
+  return all.slice(0, 8);
 }
 
 export async function getDealProducts(): Promise<DemoProduct[]> {
   const all = await getProducts();
-  return all.filter((p) => p.is_deal);
+  const deals = all.filter((p) => p.is_deal);
+  if (deals.length > 0) return deals;
+  const saleProducts = all.filter(
+    (p) => p.sale_price_fils !== null && p.sale_price_fils !== undefined
+  );
+  if (saleProducts.length > 0) return saleProducts;
+  return all.slice(0, 4);
 }
 
 function filterDemoProducts(products: DemoProduct[], params: GetProductsParams): DemoProduct[] {

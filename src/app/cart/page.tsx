@@ -131,7 +131,7 @@ export default function CartPage() {
               <div key={item.id} className="py-5 first:pt-0 last:pb-0 flex flex-col sm:flex-row gap-5 items-center">
                 <div className="relative w-24 h-24 rounded-xl bg-muted/40 p-2 flex-shrink-0">
                   <Image
-                    src={item.image}
+                    src={item.image || "/placeholder.png"}
                     alt={item.title}
                     fill
                     className="object-contain p-1"

@@ -116,7 +116,7 @@ export function CartDrawer() {
                   {/* Thumbnail */}
                   <div className="relative w-20 h-20 rounded-xl bg-muted/40 border border-border/60 overflow-hidden flex-shrink-0">
                     <Image
-                      src={item.image}
+                      src={item.image || "/placeholder.png"}
                       alt={item.title}
                       fill
                       className="object-contain p-2"

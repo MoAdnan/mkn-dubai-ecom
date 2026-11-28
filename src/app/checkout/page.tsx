@@ -1211,7 +1211,7 @@ function CheckoutForm() {
                     <div className="flex items-center gap-3">
                       <div className="relative w-12 h-12 rounded-lg bg-muted/40 p-1 flex-shrink-0">
                         <Image
-                          src={item.image}
+                          src={item.image || "/placeholder.png"}
                           alt={item.title}
                           fill
                           className="object-contain p-0.5"
