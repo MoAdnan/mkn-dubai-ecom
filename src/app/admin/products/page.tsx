@@ -12,6 +12,10 @@ import {
   X,
   Loader2,
   CheckCircle2,
+  UploadCloud,
+  ImageIcon,
+  AlertCircle,
+  ExternalLink,
 } from "lucide-react";
 import { type DemoProduct } from "@/lib/products-data";
 import { formatAED, aedToFils } from "@/lib/utils";
@@ -19,6 +23,7 @@ import {
   getAdminProductsAction,
   saveProductAction,
   deleteProductAction,
+  uploadProductImageAction,
 } from "@/app/actions/admin-products";
 
 export default function AdminProductsPage() {
@@ -41,6 +46,10 @@ export default function AdminProductsPage() {
   const [imageUrl, setImageUrl] = React.useState(
     "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?auto=format&fit=crop&w=1000&q=80"
   );
+  const [isUploadingImage, setIsUploadingImage] = React.useState(false);
+  const [uploadError, setUploadError] = React.useState<string | null>(null);
+  const [showUrlInput, setShowUrlInput] = React.useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
   // Load from persistent store on mount
   React.useEffect(() => {
@@ -67,6 +76,34 @@ export default function AdminProductsPage() {
       p.brand_name.toLowerCase().includes(search.toLowerCase())
   );
 
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingImage(true);
+    setUploadError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await uploadProductImageAction(formData);
+
+      if (res.success && res.url) {
+        setImageUrl(res.url);
+        showToast("Image uploaded to Supabase Storage!");
+      } else {
+        setUploadError(res.error || "Failed to upload image.");
+      }
+    } catch (err: any) {
+      setUploadError(err?.message || "Upload failed. Please check network connection.");
+    } finally {
+      setIsUploadingImage(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
   const openCreateModal = () => {
     setEditingProduct(null);
     setTitle("");
@@ -74,9 +111,9 @@ export default function AdminProductsPage() {
     setPriceAED(1999);
     setSalePriceAED(undefined);
     setStock(20);
-    setImageUrl(
-      "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?auto=format&fit=crop&w=1000&q=80"
-    );
+    setImageUrl("");
+    setUploadError(null);
+    setShowUrlInput(false);
     setIsModalOpen(true);
   };
 
@@ -90,6 +127,8 @@ export default function AdminProductsPage() {
     setSalePriceAED(product.sale_price_fils ? product.sale_price_fils / 100 : undefined);
     setStock(product.stock_quantity);
     setImageUrl(product.images[0]?.url || "");
+    setUploadError(null);
+    setShowUrlInput(false);
     setIsModalOpen(true);
   };
 
@@ -98,6 +137,10 @@ export default function AdminProductsPage() {
     setSaving(true);
 
     try {
+      const finalImage =
+        imageUrl.trim() ||
+        "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?auto=format&fit=crop&w=1000&q=80";
+
       let productToSave: DemoProduct;
 
       if (editingProduct) {
@@ -110,7 +153,7 @@ export default function AdminProductsPage() {
           base_price_fils: aedToFils(priceAED),
           sale_price_fils: salePriceAED ? aedToFils(salePriceAED) : null,
           stock_quantity: stock,
-          images: [{ url: imageUrl, alt: title, is_primary: true }],
+          images: [{ url: finalImage, alt: title, is_primary: true }],
         };
       } else {
         productToSave = {
@@ -135,7 +178,7 @@ export default function AdminProductsPage() {
           is_deal: false,
           warranty_months: 12,
           warranty_type: "Official UAE Distributor Warranty",
-          images: [{ url: imageUrl, alt: title, is_primary: true }],
+          images: [{ url: finalImage, alt: title, is_primary: true }],
           variants: [],
           specs: { Warranty: "12 Months TDRA approved" },
         };
@@ -428,16 +471,128 @@ export default function AdminProductsPage() {
                 </div>
               </div>
 
-              <div>
-                <label className="font-semibold block mb-1">Image URL</label>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="font-semibold block text-xs text-foreground">
+                    Product Image (Supabase Storage) *
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowUrlInput(!showUrlInput)}
+                    className="text-[11px] text-cyan-400 hover:underline"
+                  >
+                    {showUrlInput ? "Hide Direct URL" : "Enter URL manually"}
+                  </button>
+                </div>
+
                 <input
-                  type="url"
-                  required
-                  placeholder="https://..."
-                  value={imageUrl}
-                  onChange={(e) => setImageUrl(e.target.value)}
-                  className="w-full p-2.5 rounded-xl bg-muted/40 border border-border/80 text-xs font-mono"
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/gif,image/avif"
+                  onChange={handleFileChange}
+                  className="hidden"
                 />
+
+                {/* Upload Drag/Click Zone */}
+                <div
+                  onClick={() => !isUploadingImage && fileInputRef.current?.click()}
+                  className={`border-2 border-dashed rounded-2xl p-4 text-center cursor-pointer transition-all ${
+                    isUploadingImage
+                      ? "border-cyan-500 bg-cyan-500/5 cursor-wait"
+                      : "border-border/80 hover:border-cyan-500 hover:bg-muted/30"
+                  }`}
+                >
+                  {isUploadingImage ? (
+                    <div className="py-3 flex flex-col items-center justify-center gap-2">
+                      <Loader2 className="w-6 h-6 animate-spin text-cyan-400" />
+                      <span className="text-xs font-semibold text-foreground">
+                        Uploading image to Supabase Storage CDN...
+                      </span>
+                      <span className="text-[10px] text-muted-foreground">
+                        Optimizing and storing in 'products' bucket
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="py-2 flex flex-col items-center justify-center gap-1.5">
+                      <div className="w-10 h-10 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center">
+                        <UploadCloud className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <span className="text-xs font-semibold text-foreground block">
+                          Click to upload product image
+                        </span>
+                        <span className="text-[10px] text-muted-foreground">
+                          Direct to Supabase Storage • PNG, JPG, WEBP, AVIF (Max 10MB)
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {uploadError && (
+                  <p className="text-[11px] text-rose-400 flex items-center gap-1">
+                    <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span>{uploadError}</span>
+                  </p>
+                )}
+
+                {/* Image Preview & Details */}
+                {imageUrl && (
+                  <div className="flex items-center gap-3 p-2.5 rounded-xl bg-muted/30 border border-border/80">
+                    <div className="relative w-12 h-12 rounded-lg bg-background p-1 flex-shrink-0 overflow-hidden border border-border/60">
+                      <Image
+                        src={imageUrl}
+                        alt="Product preview"
+                        fill
+                        className="object-contain"
+                        sizes="48px"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-[11px] font-semibold text-foreground block truncate">
+                        {imageUrl.includes("supabase.co")
+                          ? "Supabase Cloud Storage"
+                          : "External Hosted Image"}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground font-mono block truncate">
+                        {imageUrl}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="px-2.5 py-1 rounded-lg bg-card border border-border/70 hover:bg-muted text-[11px] font-semibold text-foreground"
+                      >
+                        Change
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setImageUrl("")}
+                        className="p-1 rounded-lg hover:bg-rose-500/10 text-muted-foreground hover:text-rose-400"
+                        title="Remove image"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Optional Direct URL input */}
+                {showUrlInput && (
+                  <div className="pt-1 animate-in fade-in">
+                    <label className="text-[11px] text-muted-foreground block mb-1">
+                      Direct Image URL (External CDN or Unsplash)
+                    </label>
+                    <input
+                      type="url"
+                      placeholder="https://images.unsplash.com/... or https://..."
+                      value={imageUrl}
+                      onChange={(e) => setImageUrl(e.target.value)}
+                      className="w-full p-2 rounded-xl bg-muted/40 border border-border/80 text-xs font-mono"
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="pt-2 flex justify-end gap-2">

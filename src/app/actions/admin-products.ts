@@ -70,3 +70,66 @@ export async function deleteProductAction(id: string): Promise<DemoProduct[]> {
   revalidatePath("/");
   return updated;
 }
+
+/**
+ * Uploads a product image directly to Supabase Storage ('products' bucket)
+ * and returns the permanent CDN public URL.
+ */
+export async function uploadProductImageAction(formData: FormData): Promise<{
+  success: boolean;
+  url?: string;
+  error?: string;
+}> {
+  try {
+    const file = formData.get("file") as File | null;
+    if (!file) {
+      return { success: false, error: "No image file provided" };
+    }
+
+    if (!file.type.startsWith("image/")) {
+      return {
+        success: false,
+        error: "Only image files (JPEG, PNG, WebP, GIF, AVIF) are allowed",
+      };
+    }
+
+    // Limit to 10MB
+    const MAX_SIZE = 10 * 1024 * 1024;
+    if (file.size > MAX_SIZE) {
+      return { success: false, error: "Image size exceeds 10MB limit" };
+    }
+
+    const supabase = createAdminClient();
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+    const cleanFileName = `prod_${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${ext}`;
+    const storagePath = `catalog/${cleanFileName}`;
+
+    const { error } = await supabase.storage.from("products").upload(storagePath, buffer, {
+      contentType: file.type,
+      upsert: true,
+    });
+
+    if (error) {
+      console.error("Supabase Storage upload error:", error);
+      return { success: false, error: error.message };
+    }
+
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from("products").getPublicUrl(storagePath);
+
+    return {
+      success: true,
+      url: publicUrl,
+    };
+  } catch (err: any) {
+    console.error("Upload server action error:", err);
+    return {
+      success: false,
+      error: err?.message || "Failed to upload image to Supabase Storage",
+    };
+  }
+}
